@@ -208,11 +208,12 @@ class Threads {
 }
 
 
-function estimateX(func, y, min, max, left_margin = 0, right_margin = 0) {
-  console.log("------")
-  console.log(min, func(min))
-  console.log(max, func(max))
-  console.log(y)
+function estimateX(ns, func, y, min, max, left_margin = 0, right_margin = 0) {
+  // console.log("------")
+  // console.log(min, func(min))
+  // console.log(max, func(max))
+  // console.log(y)
+
   // finds x such that (y - margin < func(x) <= y)
   // if there is no such x return the closest x
 
@@ -258,7 +259,11 @@ function estimateX(func, y, min, max, left_margin = 0, right_margin = 0) {
     iteratins++
 
     if (iteratins > 100) {
-      throw new Error("could not locate x. min: " + min + " max: " + max + " y: " + y)
+      ns.printf("reatched max iterations, returning current value anyways")
+      ns.printf("    min: " + min, " func(min): " + func(min))
+      ns.printf("    max: " + max, " func(max): " + func(max))
+      return cur 
+      // throw new Error("could not locate x. min: " + min + " max: " + max + " y: " + y)
     }
   }
 
@@ -309,7 +314,7 @@ async function fixSecurity(ns, target, availableRam) {
 
 /** @param {NS} ns */
 async function fixMoney(ns, target, availableRam) {
-  if (ns.getServerMoneyAvailable(target) != ns.getServerMaxMone(target)) {
+  if (ns.getServerMoneyAvailable(target) != ns.getServerMaxMoney(target)) {
     // check if it has to be fixed
 
     function growPToRam(x) {
@@ -330,7 +335,7 @@ async function fixMoney(ns, target, availableRam) {
     let threads = new Threads()
 
     // nothing is set to the result since it alredy sets the properties of "threads"
-    estimateX(growPToRam, availableRam, 1, maxMul, 0, 0.1)
+    estimateX(ns, growPToRam, availableRam, 1, maxMul, 0, 0.1)
 
     // defined before rounding the threads
     const delta = ns.growthAnalyze(target, maxMul) + 1 - threads.grow
@@ -386,7 +391,9 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
 
   // nothing is set to the result since it alredy sets the properties of "threads"
 
-  estimateX(hackThreadsToRam, avalibleRam, 0, hackForHalf, -1, 0)
+  // if the margin is less than 4 (larger than -4) can leed to it 
+  // getting stuck due to the rounding of threads in hackThreadsToRam()
+  estimateX(ns, hackThreadsToRam, avalibleRam, 0, hackForHalf, -4, 0)
 
   threads.hack = Math.floor(threads.hack)
 
@@ -423,6 +430,8 @@ async function hackServer(ns, target, avalibleRam) {
   ns.printf("    " + threads.grow + " money correcing threads")
   ns.printf("    " + threads.weaken + " security correcting threads")
   ns.printf("    times " + multiThreads + " instaces")
+  ns.printf("    expected gain: $" + bigFormatNum(threads.hack * multiThreads) + " instaces")
+  
   
   for (let i = 0; i < multiThreads; i++) {
     scheduleWGH(ns, target, threads)
@@ -519,7 +528,6 @@ function killAll(ns, ...servers) {
 /** @param {NS} ns */
 export async function main(ns) {
   ns.disableLog("ALL")
-  ns.kill
   const target = ns.args[0]
 
   await startAtack(ns, target)
