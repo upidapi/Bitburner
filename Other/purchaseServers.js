@@ -1,10 +1,9 @@
-import { estimateX } from "Helpers/EstimateX.js"
-
-
 /** @param {NS} ns */
-export async function main(ns) {
+export async function purchaseMaxServers(ns, moneyAvalible = null) {
     const myServers = ns.getPurchasedServers()
-    let moneyAvalible = ns.getServerMoneyAvailable("home")
+    if (moneyAvalible == null) {
+        moneyAvalible = ns.getServerMoneyAvailable("home")
+    }
 
     const maxRam = ns.getPurchasedServerMaxRam()
     const logMaxRam = Math.log2(maxRam)
@@ -35,9 +34,10 @@ export async function main(ns) {
 
         // can buy more servers
         if (myServers.length < ns.getPurchasedServerLimit()) {
-            ns.purchaseServer("pserver-2^" + i, ram)        
+            ns.purchaseServer("pserver-2^" + i, ram)
+            ns.tprintf("pserver-2^" + i, ram)
             moneyAvalible -= cost
-            
+
         } else {
             let smallest = myServers[0]
             for (let j = 1; j < myServers.length; j++) {
@@ -49,7 +49,8 @@ export async function main(ns) {
             }
 
             if (ram > ns.getServerMaxRam(smallest)) {
-                ns.purchaseServer("pserver-2^" + i, ram)        
+                ns.purchaseServer("pserver-2^" + i, ram)
+                ns.tprintf("pserver-2^" + i, ram)
                 moneyAvalible -= cost
 
             } else {
@@ -57,5 +58,11 @@ export async function main(ns) {
             }
         }
     }
-    
+
+}
+
+
+/** @param {NS} ns */
+export async function main(ns) {
+    purchaseMaxServers(ns)
 }

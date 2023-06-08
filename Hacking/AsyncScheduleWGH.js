@@ -38,13 +38,12 @@ export async function main(ns) {
     ns.printf("distributed " + g_threads + " grow threads")
     distributeThreads(ns, "Hacking/ThreadScripts/Grow.js", g_threads, target)
 
-    ns.printf("waiting " + (delta_hack_start / 1000).toFixed(2) + " seconds before starting grow")
+    ns.printf("waiting " + (delta_hack_start / 1000).toFixed(2) + " seconds before starting hack")
     await ns.sleep(delta_hack_start)
 
     // ensure that the hack time hasn't changed 
     if (hackTime != ns.getHackTime(target)) {
         ns.printf("the hack time changed, aborted WGH secuence (only weaken and grow got called)")
-        sec 
         // if it has stop
         return
     }
