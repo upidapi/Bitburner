@@ -176,72 +176,12 @@ export function getAvalibleRamWGH(ns) {
 
 var usedRam = []
 
-function getUsedRam() {
-    let unexpierdUsedRam = []
-    let totUsedRam = 0
-
-    for (let i = 0; i < reservedRam.length; i++) {
-        const item = reservedRam[i]
-        const expirationTime = item[0]
-
-        if (expirationTime < Date.now()) {
-            // has expierd
-            continue
-        }
-
-        unexpierdUsedRam.push(item)
-
-        totUsedRam += item[1]
-    }
-
-    return totUsedRam
-}
-
-/** @param {NS} ns */
-function waitTilRamAvalible(ns, totalNeededRam, avalibeRam) {
-    // const avalibeRam = 
-
-    sortedUsedRam = usedRam.sort((a, b) => {
-        return a[0] - b[0]
-    })
-
-    let neededRam = totalNeededRam - avalibeRam
-
-    for (let i = 0; i < sortedUsedRam.length; i++) {
-        expirationTime = sortedUsedRam[i][0]
-
-        if (expirationTime < Date.now()) {
-            // has expierd
-            continue
-        }
-
-        neededRam -= sortedUsedRam[i][1]
-        
-        if (neededRam <= 0) {
-            ns.printf("waiting " + expirationTime - Date.now() + 5 + " in an aptemt to get the needed ram")
-            ns.sleep(expirationTime - Date.now() + 5)
-
-            if (totalNeededRam <= getAvalibleRamWGH(ns)) {
-                ns.printf("it worked")
-                return true
-            }
-
-            ns.printf("it didn't work")
-            return false
-        }
-    }
-
-    return false
-}
-
 /** @param {NS} ns */
 function waitTilMoreRamAvalible(ns) {
 
     sortedUsedRam = usedRam.sort((a, b) => {
         return a[0] - b[0]
     })
-
-    let neededRam = totalNeededRam - avalibeRam
 
     for (let i = 0; i < sortedUsedRam.length; i++) {
         expirationTime = sortedUsedRam[i][0]
@@ -461,7 +401,7 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
 
     // if the margin is less than 4 (larger than -4) can leed to it 
     // getting stuck due to the rounding of threads in hackThreadsToRam()
-    usedRamPerCycle = estimateX(ns, hackThreadsToRam, avalibleRam, 0, hackForHalf, -10, 0)
+    const usedRamPerCycle = estimateX(ns, hackThreadsToRam, avalibleRam, 0, hackForHalf, -10, 0)
 
     threads.hack = Math.floor(threads.hack)
 
@@ -471,7 +411,7 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
 
     const mul = Math.floor(avalibleRam / threads.ramUsage())
     
-    isOptimalThreads = avalibleRam - usedRamPerCycle <= 10
+    const isOptimalThreads = avalibleRam - usedRamPerCycle <= 10
 
     return [threads, mul, isOptimalThreads]
 }
@@ -520,7 +460,6 @@ export async function startAtack(ns, target) {
     reservedRam = []
 
     let servers = getServers(ns)
-    ns.tprint(servers)
     // fix the server money and security
     while (true) {
         await ns.sleep(100)
@@ -548,6 +487,11 @@ export async function startAtack(ns, target) {
 
     let lastMaxHack = false
     while (true) {
+        const avalibleRam = getAvalibleRamWGH(ns, ...servers)
+        if (avalibleRam == 0) {
+            continue
+        }
+        
         const returnVal = getMaxHackThreads(ns, target, avalibleRam)
         const threads = returnVal[0]
 

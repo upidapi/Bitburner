@@ -49,7 +49,8 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
             }
 
             if (ram > ns.getServerMaxRam(smallest)) {
-                ns.purchaseServer("pserver-2^" + i, ram)
+                ns.upgradePurchasedServer(smallest, ram)
+                ns.renamePurchasedServer(smallest, "pserver-2^" + i)
                 ns.tprintf("pserver-2^" + i, ram)
                 moneyAvalible -= cost
 

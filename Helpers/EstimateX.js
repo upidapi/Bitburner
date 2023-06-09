@@ -51,8 +51,8 @@ export function estimateX(ns, func, y, min, max, left_margin = 0, right_margin =
   
       if (iteratins > 100) {
         ns.printf("reatched max iterations, returning current value anyways")
-        ns.printf("    min: " + min, " func(min): " + func(min))
-        ns.printf("    max: " + max, " func(max): " + func(max))
+        ns.printf("    min: " + min + " func(min): " + func(min))
+        ns.printf("    max: " + max + " func(max): " + func(max))
         return cur 
         // throw new Error("could not locate x. min: " + min + " max: " + max + " y: " + y)
       }
