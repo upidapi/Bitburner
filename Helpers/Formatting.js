@@ -1,4 +1,3 @@
-/** @param {NS} ns */
 export function bigFormatNum(num, p_precision = 2) {
   if (num == 0) {
     return "0"
@@ -11,9 +10,9 @@ export function bigFormatNum(num, p_precision = 2) {
 
   var exponent = Math.round(Math.log10(num));
 
-  if (-1 > suf_pos > 4) {
+  if (-1 > suf_pos || suf_pos > 4) {
     //exponent
-    var rounded_number = (num * (Math.pow(10, -exponent)).toFixed(p_precision))
+    var rounded_number = (num * (Math.pow(10, -exponent))).toFixed(p_precision)
     return rounded_number + " x 10^" + exponent
   } else {
     var sufix = sufixes[suf_pos]

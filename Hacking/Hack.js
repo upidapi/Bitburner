@@ -177,21 +177,21 @@ export function getAvalibleRamWGH(ns) {
 var usedRam = []
 
 /** @param {NS} ns */
-function waitTilMoreRamAvalible(ns) {
+async function waitTilMoreRamAvalible(ns) {
 
-    sortedUsedRam = usedRam.sort((a, b) => {
+    const sortedUsedRam = usedRam.sort((a, b) => {
         return a[0] - b[0]
     })
 
     for (let i = 0; i < sortedUsedRam.length; i++) {
-        expirationTime = sortedUsedRam[i][0]
+        const expirationTime = sortedUsedRam[i][0]
 
         if (expirationTime < Date.now()) {
             // has expierd
             continue
         }
-        
-        ns.sleep(expirationTime - Date.now() + 5)
+
+        await ns.sleep(expirationTime - Date.now() + 5)
         return true
     }
 
@@ -365,8 +365,8 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
     // maxThreads := how many threads of each you can have per cycle
     // maxCycles := how many paralell cycles can be run at once
     // isOptimalThreads := is the amount of threads you can have per cycle limited by the server money
-    
-    
+
+
     function hackThreadsToRam(hackThreads) {
         threads.hack = hackThreads
 
@@ -410,8 +410,8 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
     }
 
     const mul = Math.floor(avalibleRam / threads.ramUsage())
-    
-    const isOptimalThreads = avalibleRam - usedRamPerCycle <= 10
+
+    const isOptimalThreads = hackForHalf - threads.hack <= 1
 
     return [threads, mul, isOptimalThreads]
 }
@@ -487,11 +487,12 @@ export async function startAtack(ns, target) {
 
     let lastMaxHack = false
     while (true) {
+        ns.getServer
         const avalibleRam = getAvalibleRamWGH(ns, ...servers)
         if (avalibleRam == 0) {
             continue
         }
-        
+
         const returnVal = getMaxHackThreads(ns, target, avalibleRam)
         const threads = returnVal[0]
 
@@ -501,31 +502,29 @@ export async function startAtack(ns, target) {
         }
 
         const isOptimalThreads = returnVal[2]
-        if (lastMaxHack) {
-            // if the last hack was max
-            if (!isOptimalThreads) {
-                // and this one isn't
-                if (waitTilMoreRamAvalible(ns)) {
-                    // try to wait til there is more avalible ram
-                    continue
-                }
-                // if there no more ram that will be freed continue on anyways
+        if (!isOptimalThreads) {
+            // dont alow multiple cycles at the same time if the last one wasn't max
+            if (await waitTilMoreRamAvalible(ns)) {
+                // try to wait til there is more avalible ram
+                continue
             }
+            // if there no more ram that will be freed continue on anyways
         }
 
         lastMaxHack = isOptimalThreads
-    
-        const nCycles = returnVal[1]
 
-        const threadExecTime = ns.getWeakenTime(target)
-        const deltaExecHack = threadExecTime / nCycles
+        scheduleWGH(ns, target, threads)
 
-        for (let i = 0; i < nCycles; i++) {
-            scheduleWGH(ns, target, threads)
-            ns.printf("started cycle " + i + " waiting " + Math.floor(deltaExecHack / 1000) + " seconds til next")
-            await ns.sleep(deltaExecHack)
+        if (isOptimalThreads) {
+            await ns.sleep(100)
+        } else {
+            ns.printf("started imperfect cycle:")
+            ns.printf("    " + threads.hack + " hack threads")
+            ns.printf("    " + threads.grow + " money correcing threads")
+            ns.printf("    " + threads.weaken + " security correcting threads")
+            // await ns.sleep(ns.getWeakenTime(target))
+            await ns.sleep(100)
         }
-
     }
 }
 
