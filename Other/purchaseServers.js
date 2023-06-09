@@ -1,6 +1,5 @@
 /** @param {NS} ns */
 export async function purchaseMaxServers(ns, moneyAvalible = null) {
-    const myServers = ns.getPurchasedServers()
     if (moneyAvalible == null) {
         moneyAvalible = ns.getServerMoneyAvailable("home")
     }
@@ -9,6 +8,8 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
     const logMaxRam = Math.log2(maxRam)
 
     while (true) {
+        const myServers = ns.getPurchasedServers()
+
         let i = 1
         while (true) {
             if (i > logMaxRam) {

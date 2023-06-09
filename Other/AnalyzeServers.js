@@ -8,6 +8,8 @@ import { bigFormatNum } from "Helpers/Formatting"
 
 import { getRoot } from "Hacking/GetRoot.js"
 
+import { getMinSecWeakenTime } from "Helpers/MyFormulas.js"
+
 /** @param {NS} ns */
 export async function depthScanAnalyze(ns) {
   const servers_and_depth = getServersDepth(ns, "home")
@@ -77,7 +79,7 @@ export function calcEstimatedMoney(ns, serverName, avalibleRam) {
   const money_per_cycle = hack_chance * max_money_per_cycle
 
 
-  const cycle_time = ns.getWeakenTime(serverName)
+  const cycle_time = getMinSecWeakenTime(ns, serverName)
 
   const money_per_ms = money_per_cycle / cycle_time
   const money_per_hr = money_per_ms * 1000 * 60 * 60
