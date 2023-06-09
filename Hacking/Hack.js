@@ -10,11 +10,9 @@ import { estimateX } from "Helpers/EstimateX.js"
 import { bigFormatNum } from "Helpers/Formatting.js"
 // // import getAvalibleRam from "helpers.js"
 
-var servers = []
-
 
 /** @param {NS} ns */
-export function distributeThreads(ns, script_name, threads, ...args) {
+export function distributeThreads(ns, servers, script_name, threads, ...args) {
     // distrubutes the script over multiple servers to get a total threads "threads"
     if (threads == 0) {
         return
@@ -39,75 +37,37 @@ export function distributeThreads(ns, script_name, threads, ...args) {
         }
 
         let maxThreads = Math.floor(serverRam / scriptRam)
-        let disThreads = Math.min(maxThreads, threads)
+        let handledThreads = Math.min(maxThreads, threads)
         // disThreads i.e distrubuted threads
-        threads -= disThreads
+        threads -= handledThreads
 
-        if (disThreads == 0) {
+        if (handledThreads == 0) {
             continue
         }
 
         ns.scp(script_name, serverName)
-        ns.exec(script_name, serverName, disThreads, ...args)
+        ns.exec(script_name, serverName, handledThreads, ...args)
 
         if (threads == 0) {
             return
         }
     }
 
+    serversAndRam = servers.map(server => [server, ns.getServerMaxRam(server) - ns.getServerUsedRam(server)])
+    // sort servers_and_ram so that it tries the larges servers first
+    serversAndRam.sort((a, b) => (b[1] - a[1]))
+
+    console.log("---------")
+    ns.tprint("test", servers, servers.length)
+    for (let i = 0; i < servers.length; i++) {
+        console.log(serversAndRam[0], serversAndRam[1], serverName != ns.getHostname(), ns.hasRootAccess(serverName))
+        ns.tprint(serversAndRam[0], serversAndRam[1], serverName != ns.getHostname(), ns.hasRootAccess(serverName))
+    }
+
     throw new Error("not enough ram on servers")
 }
 
 const w_g_h_margin = 5
-
-
-// const high_sec_margin = 5
-
-// // stores the end times of the high_sec_times 
-// /**
-//  * - 
-//  * | start margin (5 ms)
-//  * -
-//  * | high sec time (10 ms)
-//  * -
-//  * | end margin (5 ms)
-//  * - <= this is the stored time 
-//  */
-// var high_sec_times = []
-
-// function check_high_sec_overlap(weaken_time, grow_time, hack_time) {
-//   // not used
-
-//   // check if any of the w_g_h start in a time of high_sec
-//   const c_time = Date.now()
-//   const high_sec_time_frame = 2 * w_g_h_margin + 2 * high_sec_margin
-
-//   var new_high_sec_time = [weaken_time, grow_time, hack_time]
-//   for (let i; i < high_sec_times.length; i++) {
-//     var high_sec_time = high_sec_times[i]
-
-//     // if its before the current time, remove it from high_sec_times
-//     if (high_sec_time > c_time) {
-//       new_high_sec_time.push()
-//     }
-
-//     var rel_time = high_sec_time - c_time - weaken_time
-
-//     // check if any of the calls are inside the margins
-
-//     // the w_g_h_margin is added since they are called with that spacing
-
-//     any_indide_margins = ((rel_time) <= high_sec_time_frame) ||
-//       ((rel_time + grow_time + w_g_h_margin) <= high_sec_time_frame) ||
-//       ((rel_time + hack_time + w_g_h_margin * 2) <= high_sec_time_frame)
-
-//     if (any_indide_margins) {
-//       return false
-//     }
-//   }
-
-//   return true
-// }
 
 
 const RamUsage = {
@@ -143,6 +103,161 @@ function getReservedRam() {
     return totReservedRam
 }
 
+/** @param {NS} ns */
+export function getThreadingServers(ns) {
+    const hoastName = ns.getHostname()
+
+    const allServers = getServers(ns)
+    const avalibleServers = []
+
+    for (let i = 0; i < allServers.length; i++) {
+        const serverName = allServers[i]
+
+        if (!ns.hasRootAccess(serverName)) {
+            continue
+        }
+
+        if (serverName == hoastName) {
+            // due to stability reasones the script realy shuld not spawn "wgh threads" on the server it's on
+            continue
+        }
+
+        const avalibeRam = ns.getServerMaxRam(serverName) - ns.getServerUsedRam(serverName) - 2
+        if (avalibeRam <= 0) {
+            continue
+        }
+
+        avalibleServers.push(serverName)
+    }
+
+    return avalibleServers
+}
+
+/** @param {NS} ns */
+export function getAvalibleRamWGH(ns) {
+    const servers = getThreadingServers(ns)
+
+    let serverAvalibleRam = 0
+
+    const hoasName = ns.getHostname()
+    for (let i = 0; i < servers.length; i++) {
+        let server_name = servers[i]
+
+        if (!ns.hasRootAccess(server_name)) {
+            continue
+        }
+
+        if (server_name == hoasName) {
+            // due to stability reasones the script realy shuld not spawn "wgh threads" on the server it's on
+            continue
+        }
+
+        let avalibeRam = ns.getServerMaxRam(server_name) - ns.getServerUsedRam(server_name)
+
+        // remove 2 gb from each server
+
+        // if we don't do this the avalible ram might spread out on several servers 
+        // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
+        // this would result in a total avalible ram of 3.
+        // that would make it beleave it has space for another hack thread (1.6 gb of ram)
+        // but no server has enough ram fo it 
+        // resulting in the proces chrashing
+
+        // threrfor we remove ram from the avalible ram
+        let avalibeRamWithMargins = Math.max(0, avalibeRam - 2)
+
+        serverAvalibleRam += avalibeRamWithMargins
+    }
+
+    const totAvalibleRam = serverAvalibleRam - getReservedRam()
+    // due to the reserved ram safty the total used ram might be "more" than the total avalibe
+    return Math.max(0, totAvalibleRam)
+}
+
+var usedRam = []
+
+function getUsedRam() {
+    let unexpierdUsedRam = []
+    let totUsedRam = 0
+
+    for (let i = 0; i < reservedRam.length; i++) {
+        const item = reservedRam[i]
+        const expirationTime = item[0]
+
+        if (expirationTime < Date.now()) {
+            // has expierd
+            continue
+        }
+
+        unexpierdUsedRam.push(item)
+
+        totUsedRam += item[1]
+    }
+
+    return totUsedRam
+}
+
+/** @param {NS} ns */
+function waitTilRamAvalible(ns, totalNeededRam, avalibeRam) {
+    // const avalibeRam = 
+
+    sortedUsedRam = usedRam.sort((a, b) => {
+        return a[0] - b[0]
+    })
+
+    let neededRam = totalNeededRam - avalibeRam
+
+    for (let i = 0; i < sortedUsedRam.length; i++) {
+        expirationTime = sortedUsedRam[i][0]
+
+        if (expirationTime < Date.now()) {
+            // has expierd
+            continue
+        }
+
+        neededRam -= sortedUsedRam[i][1]
+        
+        if (neededRam <= 0) {
+            ns.printf("waiting " + expirationTime - Date.now() + 5 + " in an aptemt to get the needed ram")
+            ns.sleep(expirationTime - Date.now() + 5)
+
+            if (totalNeededRam <= getAvalibleRamWGH(ns)) {
+                ns.printf("it worked")
+                return true
+            }
+
+            ns.printf("it didn't work")
+            return false
+        }
+    }
+
+    return false
+}
+
+/** @param {NS} ns */
+function waitTilMoreRamAvalible(ns) {
+
+    sortedUsedRam = usedRam.sort((a, b) => {
+        return a[0] - b[0]
+    })
+
+    let neededRam = totalNeededRam - avalibeRam
+
+    for (let i = 0; i < sortedUsedRam.length; i++) {
+        expirationTime = sortedUsedRam[i][0]
+
+        if (expirationTime < Date.now()) {
+            // has expierd
+            continue
+        }
+        
+        ns.sleep(expirationTime - Date.now() + 5)
+        return true
+    }
+
+    return false
+}
+
 
 /** 
  * @param {NS} ns 
@@ -163,14 +278,26 @@ function scheduleWGH(ns, target, threads) {
      * grow => 3.2x
      * hack => 1x
      */
-    let weakenTime = ns.getWeakenTime(target)
+    const weakenTime = ns.getWeakenTime(target)
+    const growTime = ns.getGrowTime(target)
+    const hackTime = ns.getHackTime(target)
+
+    // time from when weaken starts to when grow starts
+    const delta_grow_start = weakenTime - growTime + 5
+
+    // time from when grow starts to when hack starts
+    const delta_hack_start = weakenTime - delta_grow_start - hackTime + 5
 
     var ramToBeReserved = 0
+    ramToBeReserved += threads.weaken * RamUsage.weaken
     ramToBeReserved += threads.grow * RamUsage.grow
     ramToBeReserved += threads.hack * RamUsage.hack
 
     // margin
-    reservedRam.push([Date.now() + weakenTime + w_g_h_margin * 2 + 5, ramToBeReserved])
+    reservedRam.push([Date.now() + delta_grow_start + 5, threads.grow * RamUsage.grow])
+    reservedRam.push([Date.now() + delta_grow_start + delta_hack_start + 5, threads.hack * RamUsage.hack])
+
+    usedRam.push([Date.now() + weakenTime + 5, ramToBeReserved])
 
     ns.run("Hacking/AsyncScheduleWGH.js", 1,
         target,
@@ -209,14 +336,6 @@ class Threads {
     }
 }
 
-
-// const growMargin = 1.05
-// const weakenMargin = 1.05
-// no multiplicative marging
-const growMargin = 1
-const weakenMargin = 1
-
-
 /** @param {NS} ns */
 async function fixSecurity(ns, target, availableRam) {
     // fixes the security as mutch as possible 
@@ -235,6 +354,10 @@ async function fixSecurity(ns, target, availableRam) {
 
         scheduleWGH(ns, target, threads)
         ns.printf("fixing security with " + weakenThreads + " threads")
+        ns.printf("    fromMin: " + fromMin)
+        ns.printf("    optimalWeakenThreads: " + optimalWeakenThreads)
+        ns.printf("    maxWeakenThreads: " + maxWeakenThreads)
+        ns.printf("    availableRam: " + availableRam)
 
         const optimal = (optimalWeakenThreads <= maxWeakenThreads)
 
@@ -298,6 +421,12 @@ async function fixMoney(ns, target, availableRam) {
 
 /** @param {NS} ns */
 export function getMaxHackThreads(ns, target, avalibleRam) {
+    // returns maxThreads, maxCycles, isOptimalThreads
+    // maxThreads := how many threads of each you can have per cycle
+    // maxCycles := how many paralell cycles can be run at once
+    // isOptimalThreads := is the amount of threads you can have per cycle limited by the server money
+    
+    
     function hackThreadsToRam(hackThreads) {
         threads.hack = hackThreads
 
@@ -321,7 +450,7 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
     // calculate start max threads
     const hackPart = ns.hackAnalyze(target)
     if (hackPart == 0) {
-        return [new Threads(), 1]
+        return [new Threads(), 1, false]
     }
 
     const hackForHalf = 0.5 / hackPart
@@ -332,17 +461,19 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
 
     // if the margin is less than 4 (larger than -4) can leed to it 
     // getting stuck due to the rounding of threads in hackThreadsToRam()
-    estimateX(ns, hackThreadsToRam, avalibleRam, 0, hackForHalf, -4, 0)
+    usedRamPerCycle = estimateX(ns, hackThreadsToRam, avalibleRam, 0, hackForHalf, -10, 0)
 
     threads.hack = Math.floor(threads.hack)
 
     if (threads.ramUsage() == 0) {
-        return [threads, 1]
+        return [threads, 1, false]
     }
 
     const mul = Math.floor(avalibleRam / threads.ramUsage())
+    
+    isOptimalThreads = avalibleRam - usedRamPerCycle <= 10
 
-    return [threads, mul]
+    return [threads, mul, isOptimalThreads]
 }
 
 /** @param {NS} ns */
@@ -353,7 +484,7 @@ async function hackServer(ns, target, avalibleRam) {
     const threads = returnVal[0]
 
     if (threads.ramUsage() == 0) {
-        return
+        return false
     }
 
     const nMultiThreads = returnVal[1]
@@ -374,7 +505,7 @@ async function hackServer(ns, target, avalibleRam) {
 
     for (let i = 0; i < multiThreads; i++) {
         scheduleWGH(ns, target, threads)
-        ns.printf("started multi thread " + i + " waiting " + Math.floor(deltaExecHack / 1000) + " til next")
+        ns.printf("started multi thread " + i + " waiting " + Math.floor(deltaExecHack / 1000) + " seconds til next")
         await ns.sleep(deltaExecHack)
     }
 
@@ -382,69 +513,75 @@ async function hackServer(ns, target, avalibleRam) {
     // might whant to somehow indicate if it has reatched max speed
 }
 
-
-/** @param {NS} ns */
-export function getAvalibleRamWGH(ns, ...servers) {
-    let totAvalibleRam = 0
-
-    const hoasName = ns.getHostname()
-    for (let i = 0; i < servers.length; i++) {
-        let server_name = servers[i]
-
-        if (!ns.hasRootAccess(server_name)) {
-            continue
-        }
-
-        if (server_name == hoasName) {
-            // due to stability reasones the script realy shuld not spawn "wgh threads" on the server it's on
-            continue
-        }
-
-        let avalibeRam = ns.getServerMaxRam(server_name) - ns.getServerUsedRam(server_name)
-
-        // remove 2 gb from each server
-
-        // if we don't do this the avalible ram might spread out on several servers 
-        // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
-        // this would result in a total avalible ram of 3.
-        // that would make it beleave it has space for another hack thread (1.6 gb of ram)
-        // but no server has enough ram fo it 
-        // resulting in the proces chrashing
-
-        // threrfor we remove ram from the avalible ram
-        let avalibeRamWithMargins = Math.max(0, avalibeRam - 2)
-
-        totAvalibleRam += avalibeRamWithMargins
-    }
-
-    return totAvalibleRam - getReservedRam()
-}
-
-
 /** @param {NS} ns */
 export async function startAtack(ns, target) {
     ns.disableLog("ALL")
 
     reservedRam = []
 
-    servers = getServers(ns)
-
+    let servers = getServers(ns)
+    ns.tprint(servers)
     // fix the server money and security
     while (true) {
+        await ns.sleep(100)
+
         let avalibleRam = getAvalibleRamWGH(ns, ...servers)
+        if (avalibleRam == 0) {
+            continue
+        }
+
         if (! await fixSecurity(ns, target, avalibleRam)) {
             continue
         }
 
         avalibleRam = getAvalibleRamWGH(ns, ...servers)
+        if (avalibleRam == 0) {
+            continue
+        }
+
         if (! await fixMoney(ns, target, avalibleRam)) {
             continue
         }
 
-        avalibleRam = getAvalibleRamWGH(ns, ...servers)
-        await hackServer(ns, target, avalibleRam)
+        break
+    }
 
-        await ns.sleep(100)
+    let lastMaxHack = false
+    while (true) {
+        const returnVal = getMaxHackThreads(ns, target, avalibleRam)
+        const threads = returnVal[0]
+
+        if (threads.ramUsage() == 0) {
+            waitTilMoreRamAvalible(ns)
+            continue
+        }
+
+        const isOptimalThreads = returnVal[2]
+        if (lastMaxHack) {
+            // if the last hack was max
+            if (!isOptimalThreads) {
+                // and this one isn't
+                if (waitTilMoreRamAvalible(ns)) {
+                    // try to wait til there is more avalible ram
+                    continue
+                }
+                // if there no more ram that will be freed continue on anyways
+            }
+        }
+
+        lastMaxHack = isOptimalThreads
+    
+        const nCycles = returnVal[1]
+
+        const threadExecTime = ns.getWeakenTime(target)
+        const deltaExecHack = threadExecTime / nCycles
+
+        for (let i = 0; i < nCycles; i++) {
+            scheduleWGH(ns, target, threads)
+            ns.printf("started cycle " + i + " waiting " + Math.floor(deltaExecHack / 1000) + " seconds til next")
+            await ns.sleep(deltaExecHack)
+        }
+
     }
 }
 
