@@ -4,8 +4,8 @@
 
 /** @param {NS} ns */
 export async function main(ns) {
-    target = ns.args[0]
-    additionalMsec = ns.args[1]
+  const target = ns.args[0]
+  const additionalMsec = ns.args[1]
 
-    await ns.grow(target, { additionalMsec: additionalMsec })
-  }
+  await ns.grow(target, { additionalMsec: additionalMsec })
+}

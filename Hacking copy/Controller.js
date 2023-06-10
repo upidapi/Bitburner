@@ -3,87 +3,86 @@
  * it controlls the batch starts
  */
 
-/**
- * terminology
- * 
- * batch start := time when batch starts (the file is run) 
- * batch launch := time when WGH thread start (the exec time is set now)
- * WGH start := time when the acctual WGH starts (will finish in ns.getWGHTime())
- * WGH exec := time when the effect of WGH takes affect
- * 
- * batch := a group of WHG that will leave the server optimal after 
- *          execution + hacks the server 
- * shotgun := a group of sequential batches
- * shotgun shell := a batch in a shotgun
- * 
- * low sec hole := a time with low security, WGH launches here
- */
+import {
+    execMargin,
+    WGHMargin,
+    // sleepMargin,
+    lowSecHoleTime,
+    minDeltaBatchExec,
+    maxShotgunShels
+} from "Hacking copy/Settings"
 
 
-// margins in ms
-const execMargin = 100
-/**
- * there has to be a low sec hole in this time
- */
+async function waitTilLowSec(ns, deltaLowSecStart) {
+    // garantees that we wil be in a low sec hole when function returns
 
-const WGHMargin = 2
-/** 
- * | := WGH exec
- * * := wait time
- * 
- *         |-| := WGHMargin (= 2)
- * | * * | * * | * * | * * | * * | *
- * 
- * if they all get offset by 1 ms, the worst case seanrio is this => 
- * * | | * * * * | | * * * * | | * * (still doesn't break)
- * */ 
+    const toLowBefore = (Date.now() - deltaLowSecStart + lowSecHoleTime) % execMargin
+    const toNextLowSecHole = execMargin - toLowBefore
 
-const lowSecHole = 3
-/**
- *             |---| := lowSecHole (= 3)
- * H G W H G W - - - H G W H G W
- * - - _ - - _ _ _ _ - - _ - - _
- *               ^ 
- *            sec hole
- */
+    if (toNextLowSecHole > 0) [
+        ns.sleep(toNextLowSecHole)
+    ]
+}
 
-const sleepCorrectionMargin = 50
-/**
- * the ns.sleep(x) time is not exact 
- * it sleeps for aproximetly y ms
- * z = Math.max(5, x) 
- * z < y < z + 50
- * 
- * therefore we correct this with aditionalMisc 
- * the max correctable time is sleepCorrectionMargin
- * 
- * larger margin results in larger ram usage 
- * ( makes the script run time sleepCorrectionMargin ms longer )
- */
+/** @param {NS} ns */
+async function startBatch(ns,
+    threads,
+    startTime) {
 
-const highSecBatchTime = WGHMargin * 3
-/** 
- * the minimum time between batch starts
-*/
+    const wTime = ns.getWeakenTime()
+    const gTime = ns.getGrowTime()
+    const hTime = ns.getHackTime()
 
-const maxShotgunShels = Math.floor((execMargin - lowSecHole) / highSecBatchTime)
-/**
- * this is the max amount of batches taht can be started before 
- * it needs a low sec hole for them to launch the WGH
- */
+    const now = Date.now()
 
+    /**   
+     *    W G    H
+     *    v v    v 
+     * |--I-----------|
+     * |----I--------|
+     * |---------I--|
+     *              |-|
+     *          2 * WGHMargin
+     */
+
+
+    deltaWStart = startTime - now
+    deltaGStart = deltaWStart + wTime - gTime - WGHMargin
+    deltaHStart = deltaGStart + wTime - hTime - 2 * WGHMargin
+
+    ns.run("Hacking-copy/ThreadScripts/Weaken.js", threads.weaken, target, deltaWStart)
+    ns.run("Hacking-copy/ThreadScripts/Grow.js", threads.grow, target, deltaGStart)
+    ns.run("Hacking-copy/ThreadScripts/Hack.js", threads.hack, target, deltaHStart)
+}
 
 
 // idk
-export async function idk(ns, target) {
+async function permaHack(ns, target) {
+    const minWeakenTime = ns.getWeakenTime(target)
+
+    // time from epoch to first lowSecHole
+    const deltaLowSecStart = (Date.now() + minWeakenTime) % execMargin
+    // let firstStartTime = Date.now() + execMargin
+
     while (true) {
         // calculate avalibleShels
         const avalibleShels = 100
         const shotgunShels = Math.min(avalibleShels, maxShotgunShels)
 
+        const firstStartTime = Date.now() + execMargin
+
+        // wait till the next lowSecHole
+        await waitTilLowSec(ns, deltaLowSecStart)
+
+        ns.tprint(firstStartTime)
+        let batchStartTime = firstStartTime
         for (let i = 0; i < shotgunShels; i++) {
-
+            await startBatch(ns, "idk", batchStartTime)
+            batchStartTime += minDeltaBatchExec
         }
-
     }
 }
+
+
+
+
