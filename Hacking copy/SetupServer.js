@@ -1,7 +1,58 @@
+import { Threads, getAvalibleRam } from "Hacking copy/Helpers"
+import { estimateX } from "Helpers/EstimateX"
+
 /** @param {NS} ns */
-async function fixSecurity(ns, target, availableRam) {
+export async function getRoot(ns, target) {
+    if (ns.hasRootAccess(target)) {
+      return true
+    }
+  
+    const homePrograms = ns.ls("home")
+    const portOpeners = []
+  
+    function addPossible(file_name, func) {
+      if (homePrograms.indexOf(file_name) >= 0) {
+        portOpeners.push(func)
+      }
+    }
+  
+    addPossible("BruteSSH.exe", ns.brutessh)
+    addPossible("FTPCrack.exe", ns.ftpcrack)
+    addPossible("relaySMTP.exe", ns.relaysmtp)
+    addPossible("HTTPWorm.exe", ns.httpworm)
+    addPossible("SQLInject.exe", ns.sqlinject)
+  
+    const portsReq = ns.getServerNumPortsRequired(target)
+  
+    if (portOpeners.length < portsReq) {
+      return false
+    }
+  
+    // iterate over all needed programs to get root
+    for (let i = 0; i < portsReq; i++) {
+      portOpeners[i](target)
+    }
+  
+    ns.nuke(target)
+  
+    return true
+  }
+  
+  /** @param {NS} ns */
+  export async function main(ns) {
+    const serverName = ns.args[0]
+  
+    return getRoot(ns, serverName)
+  }
+
+/** @param {NS} ns */
+export async function fixSecurity(ns, target, availableRam) {
     // fixes the security as mutch as possible 
     // returns true if the process to fix it will fully fix it or if it's already fixed
+
+    if (availableRam == 0) {
+        return false
+    }
 
     const fromMin = ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target)
 
@@ -37,7 +88,11 @@ async function fixSecurity(ns, target, availableRam) {
 }
 
 /** @param {NS} ns */
-async function fixMoney(ns, target, availableRam) {
+export async function fixMoney(ns, target, availableRam) {
+    if (availableRam == 0) {
+        return false
+    }
+
     if (ns.getServerMoneyAvailable(target) != ns.getServerMaxMoney(target)) {
         // check if it has to be fixed
 
@@ -81,26 +136,25 @@ async function fixMoney(ns, target, availableRam) {
     return true
 }
 
+import { getServers } from "Other/ScanServers"
+import { getAvalibleRam } from "Hacking copy/Helpers"
 
+/** @param {NS} ns */
 export async function fixServer(ns, target) {
+    await getRoot(ns, target)
+
     let servers = getServers(ns)
     // fix the server money and security
     while (true) {
         await ns.sleep(100)
 
-        let avalibleRam = getAvalibleRamWGH(ns, ...servers)
-        if (avalibleRam == 0) {
-            continue
-        }
+        let avalibleRam = getAvalibleRam(ns, ...servers)
 
         if (! await fixSecurity(ns, target, avalibleRam)) {
             continue
         }
 
-        avalibleRam = getAvalibleRamWGH(ns, ...servers)
-        if (avalibleRam == 0) {
-            continue
-        }
+        avalibleRam = getAvalibleRam(ns, ...servers)
 
         if (! await fixMoney(ns, target, avalibleRam)) {
             continue
