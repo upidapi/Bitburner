@@ -12,6 +12,7 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
 
         let i = 1
         while (true) {
+            // ns.tprint(i)
             if (i > logMaxRam) {
                 i--
                 break
@@ -25,6 +26,8 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
             i++
         }
 
+        // ns.tprint("--|", i)
+
         if (i == 0) {
             // cant buy any servers
             break
@@ -35,24 +38,39 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
 
         // can buy more servers
         if (myServers.length < ns.getPurchasedServerLimit()) {
-            ns.purchaseServer("pserver-2^" + i, ram)
-            ns.tprintf("pserver-2^" + i, ram)
             moneyAvalible -= cost
 
         } else {
             let smallest = myServers[0]
             for (let j = 1; j < myServers.length; j++) {
                 const pServerName = myServers[j]
+                // ns.tprint(j, pServerName, " ", smallest)
+                // ns.tprint("  ", ns.getServerMaxRam(pServerName))
+                // ns.tprint("  ", ns.getServerMaxRam(smallest))
+                
 
                 if (ns.getServerMaxRam(pServerName) < ns.getServerMaxRam(smallest)) {
                     smallest = pServerName
                 }
             }
 
+            // ns.tprint(smallest)
+
             if (ram > ns.getServerMaxRam(smallest)) {
                 ns.upgradePurchasedServer(smallest, ram)
-                ns.renamePurchasedServer(smallest, "pserver-2^" + i)
-                ns.tprintf("pserver-2^" + i, ram)
+                let j = 0
+                let possibleName = "pserver-2^" + i
+                while (true) {
+                    if (!myServers.includes(possibleName)) {
+                        ns.renamePurchasedServer(smallest, possibleName)
+                        break
+                    }
+
+                    possibleName = "pserver-2^" + i + "-" + j
+                    j++
+                }
+
+                ns.tprint(smallest, possibleName, ram)
                 moneyAvalible -= cost
 
             } else {

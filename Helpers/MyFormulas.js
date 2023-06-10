@@ -29,6 +29,11 @@ export function getMinSecHackTime(ns, serverName) {
 }
 
 /** @param {NS} ns */
+export function getMinSecGrowTime(ns, serverName) {
+  return getMinSecHackTime(ns, serverName) * 4;
+}
+
+/** @param {NS} ns */
 export function getMinSecWeakenTime(ns, serverName) {
     return getMinSecHackTime(ns, serverName) * 4;
 }
