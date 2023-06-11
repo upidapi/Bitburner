@@ -9,6 +9,7 @@ import { bigFormatNum } from "Helpers/Formatting"
 import { getRoot } from "Hacking/GetRoot.js"
 
 import { getMinSecWeakenTime } from "Helpers/MyFormulas.js"
+import { getAvailableRam, maxAvalibleRam } from "HybridShotgunBatcher/Helpers"
 
 /** @param {NS} ns */
 export async function depthScanAnalyze(ns) {
@@ -72,12 +73,13 @@ export function calcEstimatedMoney(ns, serverName, avalibleRam) {
 
   const hackThreads = threads.hack * nThreads
 
-  const hack_chance = (100 - ns.getServerMinSecurityLevel(serverName))
+  const a = (100 - ns.getServerSecurityLevel(serverName)) / 100
+  const b = (100 - ns.getServerMinSecurityLevel(serverName)) / 100
 
-  const max_money_per_cycle = hackThreads * ns.hackAnalyze(serverName) * ns.getServerMaxMoney(serverName)
+  const minDifficultyCorrector = b / a
 
-  const money_per_cycle = hack_chance * max_money_per_cycle
-
+  const pMoneyHacked  = ns.hackAnalyze(serverName) / minDifficultyCorrector
+  const money_per_cycle = hackThreads * pMoneyHacked * ns.getServerMaxMoney(serverName)
 
   const cycle_time = getMinSecWeakenTime(ns, serverName)
 
@@ -91,7 +93,7 @@ export function calcEstimatedMoney(ns, serverName, avalibleRam) {
 export async function scanAnalyzeServers(ns) {
   const servers = getServers(ns, "home")
 
-  let avalibleRam = getAvalibleRamWGH(ns, ...servers)
+  let avalibleRam = maxAvalibleRam(ns, servers)
 
   let serversData = servers.map((server_name) => { return calcEstimatedMoney(ns, server_name, avalibleRam)})
 

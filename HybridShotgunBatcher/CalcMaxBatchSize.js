@@ -1,4 +1,5 @@
-import { Threads } from "Hacking copy/Helpers"
+import { Threads } from "HybridShotgunBatcher/Helpers"
+import { estimateX } from "Helpers/EstimateX"
 
 /** @param {NS} ns */
 export function getMaxHackThreads(ns, target, avalibleRam) {

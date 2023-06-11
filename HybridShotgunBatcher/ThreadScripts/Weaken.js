@@ -8,5 +8,4 @@ export async function main(ns) {
   const additionalMsec = ns.args[1]
 
   await ns.weaken(target, { additionalMsec: additionalMsec })
-  ns.tprint(ns.args[1])
 }
