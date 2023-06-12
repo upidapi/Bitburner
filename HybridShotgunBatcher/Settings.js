@@ -8,7 +8,7 @@
  * 
  * batch := a group of WHG that will leave the server optimal after 
  *          execution + hacks the server 
- * shotgun := a group of sequential batches
+ * shotgun := a group of sequential batches, folowed by a low sec hole
  * shotgun shell := a batch in a shotgun
  * 
  * low sec hole := a time with low security, WGH launches here

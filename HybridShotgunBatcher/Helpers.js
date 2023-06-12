@@ -232,7 +232,7 @@ export async function startBatch(ns,
 
     if (toWStart < 0 | toGStart < 0 | toHStart < 0) {
         // execTime to small
-        return -1
+        return false
     }
 
     // ns.tprint(toWStart)
@@ -253,5 +253,5 @@ export async function startBatch(ns,
         target,
         toHStart)
 
-    return 0
+    return true
 }
