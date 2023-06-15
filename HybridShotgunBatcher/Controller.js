@@ -33,7 +33,7 @@ function getNextSecHole(time = null) {
 
 
 /** @param {NS} ns */
-async function v2(ns, target, fullBatchThreads) {
+async function hybridShotgunLoop(ns, target, fullBatchThreads) {
     const batchRamUsage = fullBatchThreads.ramUsage()
 
     ns.printf("batch size:")
@@ -46,61 +46,148 @@ async function v2(ns, target, fullBatchThreads) {
     const servers = getServers(ns)
 
     let secHoleStart = getNextSecHole(Date.now())
-    ns.sleep(secHoleStart - Date.now())
+    await ns.sleep(secHoleStart - Date.now())
     let execTime = getNextSecHole(Date.now() + ns.getWeakenTime(target))
 
     while (true) {
-        const lowSecHoleEnd = secHoleStart + sleepMargin
+        if (Date.now() - secHoleStart > sleepMargin) {
+            // the sleepMargin was surpassed
+            // i.e the sleep time inacuraccy was larger than the sleepMargin 
+
+            ns.print("the sleepMargin was surpassed:")
+            ns.print("  after low sec start " + (Date.now() - secHoleStart))
+            ns.print("  after low sec end " + (Date.now() - secHoleStart - sleepMargin))
+
+            const oldHole = secHoleStart
+            const oldTime = Date.now()
+    
+            secHoleStart = getNextSecHole(Date.now())
+            await ns.sleep(secHoleStart - Date.now())
+    
+            ns.print(`oldHole:     ${oldHole}`)
+            ns.print(`nextHole:    ${secHoleStart}`)
+            ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
+            ns.print(`actuallTime: ${Date.now() - oldTime}`)
+
+        }
+
+        if (ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target)) {
+            const errorMsg =
+                "securrity to high ("
+                + ns.getServerSecurityLevel(target).toFixed(2)
+                + "/"
+                + ns.getServerMinSecurityLevel(target).toFixed(2)
+                + ")"
+
+            ns.print(errorMsg)
+
+            ns.tail()
+
+            throw new Error(errorMsg)
+        }
+
+
+        const lowSecHoleEnd = secHoleStart + lowSecHoleTime
 
         // ie the end of the secHole right before the execTime secHole
         // + WGHMargin (because it's the final exec time) 
-        const firstBatchExecTime = execTime - execMargin + sleepMargin + WGHMargin
+        const firstBatchExecTime = execTime - minDeltaBatchExec * (maxShotgunShels - 1)
 
-        const firstBatchLanch = firstBatchExecTime - ns.getWeakenTime(target)
+        // the "- WGHMargin" is due to that the weaken doesn't actually start 
+        // ns.getWeakenTime(target) ms earlier since it is sheduled to be compleate 
+        // at execTime - WGHMargin
+        const firstBatchLanch = firstBatchExecTime - ns.getWeakenTime(target) - WGHMargin
 
         // the time from when the secHole ends to the time that the 
         // first batch in the shotgun lanches
         const firstBatchDeltaLanch = firstBatchLanch - lowSecHoleEnd
 
-        // firstBatchDeltaLanch beeing larger than execMargin would mean that 
-        // we are basically pre fiering the next shotgun's batches.
-        // Doing that would just waste ram, whithout any upside therefour 
-        // wait til the next shotgun to fire those batches if that happens
-        // i.e skip this shotgun and just go the next (whithout increasing the 
-        // execTime) 
-        if (firstBatchDeltaLanch < execMargin) {
-            // calculate maxShells for shotgun
-            const avalibleRam = getAvailableRam(ns, servers)
+        if (firstBatchDeltaLanch < 0) {
+            // we can't lanch a batch in the past
 
-            const maxShellsForRam = Math.floor(avalibleRam / batchRamUsage)
-
-            const maxShellsForTime = maxShotgunShels
-
-            const maxShells = Math.min(maxShellsForRam, maxShellsForTime)
-
-            for (let i = 0; i < maxShells; i++) {
-                const batchExecTime = execTime - i * WGHMargin
-
-                const sucsesSatus = await startBatch(ns,
-                    target,
-                    fullBatchThreads,
-                    servers,
-                    batchExecTime)
-
-                if (!sucsesSatus) {
-                    // batchExecTime to smal =>
-                    // go to next shotgun
-                    break
-                }
-            }
-
-            // push the folowing batches to the next shotgun
+            // therefor push the exec time to the next possible 
+            // time. i.e the next security hole
             execTime += execMargin
+
+            ns.print("end shift")
+
+            continue
         }
 
-        // go to the next shotgun start
-        let secHoleStart = getNextSecHole(secHoleStart)
-        ns.sleep(secHoleStart - Date.now())
+        if (firstBatchDeltaLanch > execMargin) {
+            // firstBatchDeltaLanch beeing larger than execMargin would mean that 
+            // we are basically pre fiering the next shotgun's batches.
+            // Doing that would just waste ram, whithout any upside therefour 
+            // wait til the next shotgun to fire those batches if that happens
+            // i.e skip this shotgun and just go the next (whithout increasing the 
+            // execTime) 
+
+            ns.print("start shift")
+
+            // go to the next shotgun start
+
+            const oldHole = secHoleStart
+            const oldTime = Date.now()
+    
+            secHoleStart = getNextSecHole(Date.now())
+            await ns.sleep(secHoleStart - Date.now())
+    
+            ns.print(`oldHole:     ${oldHole}`)
+            ns.print(`nextHole:    ${secHoleStart}`)
+            ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
+            ns.print(`actuallTime: ${Date.now() - oldTime}`)
+
+            continue
+        }
+
+        // calculate maxShells for shotgun
+        const avalibleRam = getAvailableRam(ns, servers)
+
+        const maxShellsForRam = Math.floor(avalibleRam / batchRamUsage)
+
+        const maxShellsForTime = maxShotgunShels
+
+        const maxShells = Math.min(maxShellsForRam, maxShellsForTime)
+
+        ns.print("idk:")
+        ns.print("  execTime:             " + execTime)
+        ns.print("  lowSecHoleEnd:        " + lowSecHoleEnd)
+        ns.print("  firstBatchExecTime:   " + firstBatchExecTime)
+        ns.print("  firstBatchLanch:      " + firstBatchLanch)
+        ns.print("  firstBatchDeltaLanch: " + firstBatchDeltaLanch)
+        ns.print("  maxShells:            " + maxShells)
+        ns.print("  maxShellsForTime:     " + maxShellsForTime)
+        ns.print("  weaken time:          " + ns.getWeakenTime(target))
+        ns.print("  now:                  " + Date.now())
+
+
+        for (let i = 0; i < maxShells; i++) {
+            const batchExecTime = execTime - i * minDeltaBatchExec
+
+            await startBatch(ns,
+                target,
+                fullBatchThreads,
+                servers,
+                batchExecTime)
+        }
+
+        ns.print("shot " + maxShells + " shells at " + execTime.toFixed(0))
+
+        // push the folowing batches to the next shotgun
+        execTime += execMargin
+
+        // go to the next viable low sec hole (i.e the next hole that is after Date.now())
+
+        const oldHole = secHoleStart
+        const oldTime = Date.now()
+
+        secHoleStart = getNextSecHole(Date.now())
+        await ns.sleep(secHoleStart - Date.now())
+
+        ns.print(`oldHole:     ${oldHole}`)
+        ns.print(`nextHole:    ${secHoleStart}`)
+        ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
+        ns.print(`actuallTime: ${Date.now() - oldTime}`)
     }
 }
 
@@ -128,12 +215,13 @@ export async function start(ns, target) {
     }
 
     // wont ever return
-    await v2(ns, target, batchThreads)
+    await hybridShotgunLoop(ns, target, batchThreads)
 }
 
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL")
+    ns.clearLog()
     const target = ns.args[0]
 
     await start(ns, target)

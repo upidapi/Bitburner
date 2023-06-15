@@ -1,7 +1,9 @@
-import { scheduleWGH, Threads } from "Hacking/Hack.js";
+import { Threads } from "HybridShotgunBatcher/Helpers";
+import { startBatch } from "HybridShotgunBatcher/Helpers";
 
 /** @param {NS} ns */
 export async function main(ns) {
+    ns.disableLog("ALL")
     // const s = Date.now()
     // for (let i = 0; i < 10; i++) {
     //     scheduleWGH(ns, "n00dles", new Threads(5, 10, 20))
@@ -64,9 +66,23 @@ export async function main(ns) {
     // }
     // ns.tprint("--", tot, "--", Date.now() - m)
 
-    setTimeout(() => ns.tprint(1), 1)
-}
+    // setTimeout(() => ns.tprint(1), 1)
 
+    // await startBatch(ns, 
+    //     "n00dles", 
+    //     new Threads(1, 10, 100), 
+    //     ["pserver-2^20"])
+
+    while (true) {
+        const s = Date.now()
+        await ns.sleep(10)
+        ns.print("result:")
+        ns.print(`  dif   : ${Date.now() - s - 10}`)
+        ns.print(`  start : ${s}`)
+        ns.print(`  end   : ${Date.now()}`)
+    }
+
+}
 
 async function pSleep(ns, ms) {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

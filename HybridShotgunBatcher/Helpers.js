@@ -92,6 +92,8 @@ export function distributeThreads(ns, servers, script_name, threads, ...args) {
     console.log("---------")
     ns.tprint("test", servers, servers.length)
     for (let i = 0; i < servers.length; i++) {
+        let serverName = serversAndRam[i][0]
+
         console.log(serversAndRam[0], serversAndRam[1], serverName != ns.getHostname(), ns.hasRootAccess(serverName))
         ns.tprint(serversAndRam[0], serversAndRam[1], serverName != ns.getHostname(), ns.hasRootAccess(serverName))
     }
@@ -193,23 +195,24 @@ export async function startBatch(ns,
     const hTime = ns.getHackTime()
 
     /**   
-     * now W G    H execTime
-     *  v  v v    v    v 
+     * now W G    H  execTime
+     *  v  v v    v     v 
      *  |--I-----------|
      *  |----I--------|
      *  |---------I--|
      *  |-|          |-|
      *  Msec      2 * WGHMargin
-     * 
+     *               |--|
+     *            3 * WGHMargin
      * (Msec i.e aditionalMsec)
      */
 
 
-    const toExec = execTime ? execTime - Date.now() : wTime + 5
+    const toExec = execTime ? execTime - Date.now() : wTime + WGHMargin
 
-    const toWStart = toExec - wTime
-    const toGStart = toExec - gTime - WGHMargin
-    const toHStart = toExec - hTime - 2 * WGHMargin
+    const toWStart = toExec - wTime - WGHMargin * 1
+    const toGStart = toExec - gTime - WGHMargin * 2
+    const toHStart = toExec - hTime - WGHMargin * 3
 
     // ns.printf("starting hack with %i", threads.hack)
     // ns.printf("  start   : %f", toHStart)
@@ -231,9 +234,28 @@ export async function startBatch(ns,
     // ns.print("")
 
     if (toWStart < 0 | toGStart < 0 | toHStart < 0) {
+        const errorMsg =
+            "execTime to small \n"
+            + "toWStart: " + toWStart + "\n"
+            + "toGStart: " + toGStart + "\n"
+            + "toHStart: " + toHStart + "\n"
+            + "toExec: " + toExec + "\n"
+            + "execTime: " + execTime + "\n"
+            + "wTime: " + wTime + "\n"
+
         // execTime to small
-        return false
+        ns.print("didn't start batch, " + errorMsg)
+
+        ns.tail()
+        // return false
+        throw new Error(errorMsg)
     }
+
+    ns.printf("satarting batch at %i", Date.now())
+    ns.printf("    to lanch %i", toWStart)
+    ns.printf("    to exec %i", toExec)
+    ns.printf("    lanch time %i", Date.now() + toWStart)
+    ns.printf("    exec time %i", execTime)
 
     // ns.tprint(toWStart)
     // ns.tprint(deltaWStart, " ", deltaGStart, " ", deltaHStart)
@@ -241,17 +263,20 @@ export async function startBatch(ns,
         "HybridShotgunBatcher/ThreadScripts/Weaken.js",
         threads.weaken,
         target,
-        toWStart)
+        toWStart,
+        Date.now() + toExec + wTime)
     distributeThreads(ns, servers,
         "HybridShotgunBatcher/ThreadScripts/Grow.js",
         threads.grow,
         target,
-        toGStart)
+        toGStart,
+        Date.now() + toExec + gTime)
     distributeThreads(ns, servers,
         "HybridShotgunBatcher/ThreadScripts/Hack.js",
         threads.hack,
         target,
-        toHStart)
+        toHStart,
+        Date.now() + toExec + hTime)
 
     return true
 }

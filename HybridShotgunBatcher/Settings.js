@@ -32,7 +32,7 @@ export const execMargin = 100
  * if they all get offset by 1 ms, the worst case seanrio is this => 
  * * | | * * * * | | * * * * | | * * (still doesn't break)
  * */
-export const WGHMargin = 2
+export const WGHMargin = 4
 
 
 /**

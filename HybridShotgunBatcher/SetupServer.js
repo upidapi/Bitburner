@@ -89,14 +89,14 @@ export async function fixSecurity(ns, target, servers, availableRam) {
     if (!optimal) {
       // if it´s not optimal don't allow for fixMoney at the same time
       await ns.sleep(ns.getWeakenTime(target))
-      return false
+      return 0
     }
 
     await ns.sleep(10) // make the effects of the function have time to take affect before the next
-    return true
+    return 1
   }
 
-  return true
+  return -1
 }
 
 /** @param {NS} ns */
@@ -147,14 +147,14 @@ export async function fixMoney(ns, target, servers, availableRam) {
     if (delta < 0.5) {
       // the grow is maximal
       await ns.sleep(10) // make the effects of the function have time to take affect before the next
-      return true
+      return 1
     }
 
     await ns.sleep(ns.getWeakenTime(target) + WGHMargin + 5)
-    return false
+    return 0
   }
 
-  return true
+  return -1
 }
 
 import { getServers } from "Other/ScanServers"
@@ -163,23 +163,37 @@ import { getServers } from "Other/ScanServers"
 export async function fixServer(ns, target) {
   await getRoot(ns, target)
 
+  // -1 => nothing 
+  //  0 => not optimal
+  //  1 optimal
   let servers = getServers(ns)
+
+
   // fix the server money and security
   while (true) {
     await ns.sleep(100)
 
     let avalibleRam = getAvailableRam(ns, servers)
 
-    if (! await fixSecurity(ns, target, servers, avalibleRam)) {
+    let secRetVal = await fixSecurity(ns, target, servers, avalibleRam)
+
+    if (secRetVal == 0) {
       continue
     }
 
     avalibleRam = getAvailableRam(ns, servers)
 
-    if (! await fixMoney(ns, target, servers, avalibleRam)) {
+    let moneyRetVal = await fixMoney(ns, target, servers, avalibleRam)
+
+    if (moneyRetVal == 0) {
       continue
     }
 
+    if (secRetVal == 1) {
+      await ns.sleep(ns.getWeakenTime(target))
+    }
+
+    ns.print(moneyRetVal, " ", secRetVal)
     break
   }
 }

@@ -8,4 +8,5 @@ export async function main(ns) {
   const additionalMsec = ns.args[1]
 
   await ns.hack(target, { additionalMsec: additionalMsec })
+  ns.tprintf("H " + ns.args[2])
 }

@@ -8,4 +8,5 @@ export async function main(ns) {
   const additionalMsec = ns.args[1]
 
   await ns.grow(target, { additionalMsec: additionalMsec })
+  ns.tprintf("G " + ns.args[2])
 }
