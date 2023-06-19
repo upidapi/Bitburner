@@ -122,8 +122,15 @@ export async function fixMoney(ns, target, servers, availableRam) {
       return threads.ramUsage()
     }
 
+    const maxMoney = ns.getServerMaxMoney(target)
+    if (maxMoney == 0) {
+      return 1
+    }
+
+    const moneyOnServer = Math.max(1, ns.getServerMoneyAvailable(target))
+
     // calculate start max threads
-    const moneyLeftP = ns.getServerMoneyAvailable(target) / ns.getServerMaxMoney(target)
+    const moneyLeftP = moneyOnServer / maxMoney
     const maxMul = 1 / moneyLeftP
 
     let threads = new Threads()

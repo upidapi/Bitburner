@@ -33,7 +33,7 @@ function getNextSecHole(time = null) {
 
 
 /** @param {NS} ns */
-async function hybridShotgunLoop(ns, target, fullBatchThreads) {
+async function hybridShotgunLoop(ns, target, fullBatchThreads, loggingPortHandle) {
     const batchRamUsage = fullBatchThreads.ramUsage()
 
     ns.printf("batch size:")
@@ -60,10 +60,10 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads) {
 
             const oldHole = secHoleStart
             const oldTime = Date.now()
-    
+
             secHoleStart = getNextSecHole(Date.now())
             await ns.sleep(secHoleStart - Date.now())
-    
+
             ns.print(`oldHole:     ${oldHole}`)
             ns.print(`nextHole:    ${secHoleStart}`)
             ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
@@ -85,7 +85,6 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads) {
 
             throw new Error(errorMsg)
         }
-
 
         const lowSecHoleEnd = secHoleStart + lowSecHoleTime
 
@@ -128,10 +127,10 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads) {
 
             const oldHole = secHoleStart
             const oldTime = Date.now()
-    
+
             secHoleStart = getNextSecHole(Date.now())
             await ns.sleep(secHoleStart - Date.now())
-    
+
             ns.print(`oldHole:     ${oldHole}`)
             ns.print(`nextHole:    ${secHoleStart}`)
             ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
@@ -160,16 +159,33 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads) {
         ns.print("  weaken time:          " + ns.getWeakenTime(target))
         ns.print("  now:                  " + Date.now())
 
+        let batchData
 
         for (let i = 0; i < maxShells; i++) {
-            const batchExecTime = execTime - i * minDeltaBatchExec
+            const batchExecTime = firstBatchExecTime + i * minDeltaBatchExec
 
-            await startBatch(ns,
+            batchData = await startBatch(ns,
                 target,
                 fullBatchThreads,
                 servers,
                 batchExecTime)
         }
+
+        const sleepCorrector = lowSecHoleEnd - Date.now()
+
+        const logEntry = new LogEntry(
+            Date.now(),
+            new ShotgunData(
+                batchData,
+                sleepCorrector,
+                minDeltaBatchExec,
+                maxShells
+            ),
+            "ShotgunData"
+        )
+            
+        // ns.tprintf(logEntry.toStr())
+        loggingPortHandle.write(logEntry.toStr())
 
         ns.print("shot " + maxShells + " shells at " + execTime.toFixed(0))
 
@@ -195,6 +211,7 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads) {
 import { fixServer } from "HybridShotgunBatcher/SetupServer"
 import { getMaxHackThreads } from "HybridShotgunBatcher/CalcMaxBatchSize"
 import { getServers } from "Other/ScanServers"
+import { LogEntry, ShotgunData } from "HybridShotgunBatcher/Dashboard/DataClasses"
 
 /** @param {NS} ns */
 export async function start(ns, target) {
@@ -214,8 +231,10 @@ export async function start(ns, target) {
         ns.printf("the batchThreads are not optimal for the selected server (%s)", target)
     }
 
+    ns.run("HybridShotgunBatcher/Dashboard/Dashboard.js", 1, ns.pid, target)
+
     // wont ever return
-    await hybridShotgunLoop(ns, target, batchThreads)
+    await hybridShotgunLoop(ns, target, batchThreads, ns.getPortHandle(ns.pid))
 }
 
 /** @param {NS} ns */

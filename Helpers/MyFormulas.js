@@ -24,8 +24,9 @@ export function getMinSecHackTime(ns, serverName) {
     const hackingTime =
       (hackTimeMultiplier * skillFactor) /
       (person.mults.hacking_speed * intBonus)
-  
-    return hackingTime;
+
+    // aparently the returned value is in seconds :)
+    return hackingTime * 1000;
 }
 
 /** @param {NS} ns */

@@ -177,10 +177,11 @@ export function maxAvalibleRam(ns, servers) {
     return serverAvalibleRam
 }
 
+import { WGHData, BatchData } from "HybridShotgunBatcher/Dashboard/DataClasses";
 
 /** 
  * @param {NS} ns 
- * @returns if the batch was sucsesfully started
+ * @returns a Batch dataClass instance
 */
 export async function startBatch(ns,
     target,
@@ -265,12 +266,14 @@ export async function startBatch(ns,
         target,
         toWStart,
         Date.now() + toExec + wTime)
+
     distributeThreads(ns, servers,
         "HybridShotgunBatcher/ThreadScripts/Grow.js",
         threads.grow,
         target,
         toGStart,
         Date.now() + toExec + gTime)
+
     distributeThreads(ns, servers,
         "HybridShotgunBatcher/ThreadScripts/Hack.js",
         threads.hack,
@@ -278,5 +281,34 @@ export async function startBatch(ns,
         toHStart,
         Date.now() + toExec + hTime)
 
-    return true
+
+    // data things
+    const wData = new WGHData(
+        "weaken",
+        wTime,
+        threads.weaken,
+        toWStart - toWStart,
+    )
+
+    const gData = new WGHData(
+        "grow",
+        gTime,
+        threads.grow,
+        toGStart - toWStart,
+    )
+
+    const hData = new WGHData(
+        "hack",
+        hTime,
+        threads.hack,
+        toHStart - toWStart,
+    )
+
+    const batchData = new BatchData(
+        wData,
+        gData,
+        hData
+    )
+
+    return batchData
 }
