@@ -52,7 +52,7 @@ const colorMap = {
 }
 
 import { WGHData, BatchData, ShotgunData, LogEntry } from "HybridShotgunBatcher/Dashboard/DataClasses";
-0
+
 class Drawer {
     constructor(p5, guiData) {
         this.p5 = p5
@@ -88,7 +88,7 @@ class Drawer {
             startTime + instance.aSec,
             aSecColour)
 
-        // draw the actuall W/H/G
+        // draw the actually W/H/G
         this.drawTimeBox(y + this.guiData.baseHeight / 2,
             this.guiData.baseHeight,
             startTime + instance.aSec,
@@ -127,36 +127,91 @@ class Drawer {
     }
 
     /**
-     * @param {int} y 
-     * @param {BatchData} instance 
+     * @param {number} y 
+     * @param {number} startTime 
+     * @param {BatchData} batch 
      */
     drawSimpleBatch(y, startTime, batch) {
         // todo implement this
 
-        throw new Error("drawSimpleBatch is unimplemented")
+        // throw new Error("drawSimpleBatch is unimplemented")
 
-        // the folowing is just the code for "drawBatch"
-        const startY = y
+        // the following is just the code for "drawBatch"
 
-        // if the threads are 0, ignore that part
-        if (batch.hI.threads != 0) {
-            // draw hack
-            y += this.drawWGH(y, startTime, batch.hI)
+        // draw low sec
+        this.drawTimeBox(
+            y,
+            this.guiData.baseHeight,
+            startTime,
+            startTime + batch.hI.getTotalDuration(),
+            colorMap.lowSec)
+
+        // this part should be somewhere else
+        // draw high sec
+        this.drawTimeBox(
+            y,
+            this.guiData.baseHeight,
+            startTime + batch.hI.getTotalDuration(),
+            startTime + batch.wI.getTotalDuration(),
+            colorMap.highSec)
+
+        return this.guiData.baseHeight * 1.5
+    }
+
+    /**
+     * @param {number} y 
+     * @param {number} startTime 
+     * @param {ShotgunData} shotgun 
+     * @returns 
+     */
+    drawShotgun(y, startTime, shotgun) {
+        const firstBatchStart = startTime + shotgun.sleepCorrector
+        let shotgunHeight = 0
+
+        let batchY = y
+        for (let i = 0; i < shotgun.nBatches; i++) {
+            // possibly start at 1
+
+            const offset = i * shotgun.deltaBatch
+
+            let totalBatchHeight
+
+            if (this.guiData.detailLevel >= 3) {
+                // draw batch
+                totalBatchHeight = this.drawBatch(
+                    batchY,
+                    firstBatchStart + offset,
+                    shotgun.batch)
+
+            } else {
+                // draw simple batch
+                totalBatchHeight = this.drawSimpleBatch(
+                    batchY,
+                    firstBatchStart + offset,
+                    shotgun.batch)
+            }
+
+            // draw batch offset
+            this.drawTimeBox(
+                batchY + this.guiData.baseHeight / 2,
+                totalBatchHeight - this.guiData.baseHeight, // remove margins
+                firstBatchStart,
+                firstBatchStart + offset,
+                colorMap.batchOffset)
+
+            batchY += totalBatchHeight
+            shotgunHeight += totalBatchHeight
         }
 
-        if (batch.gI.threads != 0) {
-            // draw grow
-            y += this.drawWGH(y, startTime, batch.gI)
-        }
+        // draw sleep corrector
+        this.drawTimeBox(
+            y + this.guiData.baseHeight / 2,
+            shotgunHeight - this.guiData.baseHeight,
+            startTime,
+            startTime + shotgun.sleepCorrector,
+            colorMap.sleepCorrector)
 
-        if (batch.wI.threads != 0) {
-            // draw weaken
-            y += this.drawWGH(y, startTime, batch.wI)
-        }
-
-        const batchHeight = y - startY
-
-        return batchHeight + this.guiData.baseHeight / 2
+        return shotgunHeight
     }
 
     /**
@@ -188,12 +243,12 @@ class Drawer {
             startTime,
             highSecStart,
             colorMap.lowSec)
-        
-        // this part shuld be somewhere else
+
+        // this part should be somewhere else
         // draw high sec
         this.drawTimeBox(
-            0,
-            this.guiData.height,
+            y,
+            this.guiData.baseHeight,
             highSecStart,
             highSecEnd,
             colorMap.highSec)
@@ -210,53 +265,12 @@ class Drawer {
     }
 
     /**
-     * @param {number} y 
-     * @param {number} startTime 
-     * @param {ShotgunData} shotgun 
-     * @returns 
+     * @param {Array<LogEntry>} things 
      */
-    drawShotgun(y, startTime, shotgun) {
-        const firstBatchStart = startTime + shotgun.sleepCorrector
-        let shotgunHeight = 0
-
-        let batchY = y
-        for (let i = 0; i < shotgun.nBatches; i++) {
-            // possibly start at 1
-
-            const offset = i * shotgun.deltaBatch
-
-            // draw batch
-            const totalBatchHeight = this.drawBatch(
-                batchY,
-                firstBatchStart + offset,
-                shotgun.batch)
-
-            // draw batch offset
-            this.drawTimeBox(
-                batchY + this.guiData.baseHeight / 2,
-                totalBatchHeight - this.guiData.baseHeight, // remove margins
-                firstBatchStart,
-                firstBatchStart + offset,
-                colorMap.batchOffset)
-
-            batchY += totalBatchHeight
-            shotgunHeight += totalBatchHeight
-        }
-
-        // draw sleep corrector
-        this.drawTimeBox(
-            y + this.guiData.baseHeight / 2,
-            shotgunHeight - this.guiData.baseHeight,
-            startTime,
-            startTime + shotgun.sleepCorrector,
-            colorMap.sleepCorrector)
-
-        return shotgunHeight
-    }
-
     drawAll(things) {
         let y = 0
 
+        // console.log(things)
         for (let i = 0; i < things.length; i++) {
             const thing = things[i]
             const startTime = thing.startTime
@@ -264,33 +278,35 @@ class Drawer {
 
             let thingWidth
 
-            // console.log(thing, startTime, data.getTotalDuration(), data.getTotalDuration() + startTime, this.sTime)
-            // check if the thing ends before the log starts 
-            if (this.guiData.timeToPos(startTime + data.getTotalDuration()) < 0) {
-                // if so dont draw thst thing
-                continue
-            }
-
             if (data instanceof WGHData) {
+                // always draw this 
                 thingWidth = this.drawWGH(y, startTime, data)
             }
 
             if (data instanceof BatchData) {
-                thingWidth = this.drawBatch(y, startTime, data)
+                if (this.guiData.detailLevel >= 3) {
+                    thingWidth = this.drawBatch(y, startTime, data)
+                } else {
+                    thingWidth = this.drawSimpleBatch(y, startTime, data)
+                }
             }
 
             if (data instanceof ShotgunData) {
-                thingWidth = this.drawShotgun(y, startTime, data)
+                if (this.guiData.detailLevel >= 2) {
+                    thingWidth = this.drawShotgun(y, startTime, data)
+                } else {
+                    thingWidth = this.drawSimpleShotgun(y, startTime, data)
+                }
             }
 
             // if (this.timeToPos(startTime) < 0) {
-            //     // if so dont draw thst thing
+            //     // if so don't draw this thing
             //     y += thingWidth
             // }
 
             y += thingWidth
 
-            if (y > this.height) {
+            if (y > this.guiData.height) {
                 break
             }
         }
@@ -336,25 +352,32 @@ class GuiData {
 
         this.resetBaseTime()
 
-        // setings:
+        // settings:
+
+        // detail level
+        // the amount of detail the graph is to be drawn with 
+        // higher this.detailLevel => more detail
+        // should be 1 - 3
+        this.detailLevel = 3
+
 
         // the default min bar height 
-        this.baseHeight = 10
+        this.baseHeight = 2
 
         // speed 
-        // how much slower the graph shuld move compared to the actual time
-        this.speed = 0.2
+        // how much slower the graph should move compared to the actual time
+        this.speed = 1
 
         // timeFrame
-        // the amont of time to be shown on the graph
+        // the amount of time to be shown on the graph
         // this.timeFrame = wTime * 2
 
         // offset to now
-        // the offset between the start of the graph and the actuall time
+        // the offset between the start of the graph and the actual time
         // in % of the timeFrame
         this.nowOffset = 1
 
-        // miliseconds per pixel
+        // milliseconds per pixel
         this.msPP = 1
     }
 
@@ -368,8 +391,8 @@ class GuiData {
     }
 
     updateSize() {
-        this.width = p5.width
-        this.height = p5.height
+        this.width = this.p5.width
+        this.height = this.p5.height
     }
 
     updateTimeFrame() {
@@ -377,13 +400,13 @@ class GuiData {
 
         const nowTime = this.baseTime + difTime * this.speed
 
-        const timeFrame = this.msPP * screenWidth
+        const timeFrame = this.msPP * this.width
 
         this.sTime = nowTime - timeFrame * this.nowOffset
 
         this.eTime = this.sTime + timeFrame
 
-        // console.log([sTime - Date.now(), eTime - Date.now()])
+        // console.log(this.sTime - Date.now(), this.eTime - Date.now())
     }
 
     timeToPos(time) {
@@ -396,16 +419,17 @@ class GuiData {
     }
 }
 
-export function filterShown(timeLine, things, option) {
+export function filterShown(guiData, things, option) {
     return things.filter(
         (x) => {
             const startTime = x.startTime
             const data = x.data
 
             if (option) {
-                return timeLine.timeToPos(startTime) < 0
+                return guiData.timeToPos(startTime) >= 0
             } else {
-                return timeLine.timeToPos(startTime + data.getTotalDuration()) < 0
+                // console.log(data.getTotalDuration(), guiData.timeToPos(startTime + data.getTotalDuration()))
+                return guiData.timeToPos(startTime + data.getTotalDuration()) >= 0
             }
         }
     )
@@ -481,7 +505,7 @@ export async function main(ns) {
 
     p5.draw = () => {
         p5.fitCanvas()
-        timeLine.update()
+        guiData.update()
 
         // get port data
         things = things.concat(getNewLogs(port))
@@ -489,7 +513,7 @@ export async function main(ns) {
         // todo draw the "now" line 
         p5.background(0)
 
-        const toDraw = filterShown(timeLine, things, false)
+        const toDraw = filterShown(guiData, things, true)
 
         drawer.drawAll(toDraw)
     }

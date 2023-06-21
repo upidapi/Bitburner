@@ -9,7 +9,7 @@ import {
     // sleepMargin,
     lowSecHoleTime,
     minDeltaBatchExec,
-    maxShotgunShels,
+    maxShotgunShells,
     sleepMargin
 } from "HybridShotgunBatcher/Settings"
 
@@ -64,33 +64,44 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads, loggingPortHandle
             secHoleStart = getNextSecHole(Date.now())
             await ns.sleep(secHoleStart - Date.now())
 
-            ns.print(`oldHole:     ${oldHole}`)
-            ns.print(`nextHole:    ${secHoleStart}`)
-            ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
-            ns.print(`actuallTime: ${Date.now() - oldTime}`)
+            ns.print(`  oldHole:     ${oldHole}`)
+            ns.print(`  nextHole:    ${secHoleStart}`)
+            ns.print(`  sleepTime:   ${secHoleStart - oldTime}`)
+            ns.print(`  actuallTime: ${Date.now() - oldTime}`)
 
         }
 
-        if (ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target)) {
-            const errorMsg =
-                "securrity to high ("
-                + ns.getServerSecurityLevel(target).toFixed(2)
-                + "/"
-                + ns.getServerMinSecurityLevel(target).toFixed(2)
-                + ")"
+        if (ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target) != 0) {
+            // probably due to that the last weaken, before the sec hole start
+            // somehow diddn't exec before the sec hole starts
+            
+            ns.print("security not min")
+            ns.print("  min sec: " + ns.getServerMinSecurityLevel(target))
+            ns.print("  cur sec: " + ns.getServerSecurityLevel(target))
 
-            ns.print(errorMsg)
+            await ns.sleep(0)
+            continue
+            
+            // if this is an error this wuld be the msg
+            // const errorMsg =
+            //     "securrity to high ("
+            //     + ns.getServerSecurityLevel(target).toFixed(2)
+            //     + "/"
+            //     + ns.getServerMinSecurityLevel(target).toFixed(2)
+            //     + ")"
 
-            ns.tail()
+            // ns.print(errorMsg)
 
-            throw new Error(errorMsg)
+            // ns.tail()
+
+            // throw new Error(errorMsg)
         }
 
         const lowSecHoleEnd = secHoleStart + lowSecHoleTime
 
         // ie the end of the secHole right before the execTime secHole
         // + WGHMargin (because it's the final exec time) 
-        const firstBatchExecTime = execTime - minDeltaBatchExec * (maxShotgunShels - 1)
+        const firstBatchExecTime = execTime - minDeltaBatchExec * (maxShotgunShells - 1)
 
         // the "- WGHMargin" is due to that the weaken doesn't actually start 
         // ns.getWeakenTime(target) ms earlier since it is sheduled to be compleate 
@@ -140,24 +151,24 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads, loggingPortHandle
         }
 
         // calculate maxShells for shotgun
-        const avalibleRam = getAvailableRam(ns, servers)
+        const availableRam = getAvailableRam(ns, servers)
 
-        const maxShellsForRam = Math.floor(avalibleRam / batchRamUsage)
+        const maxShellsForRam = Math.floor(availableRam / batchRamUsage)
 
-        const maxShellsForTime = maxShotgunShels
+        const maxShellsForTime = maxShotgunShells
 
         const maxShells = Math.min(maxShellsForRam, maxShellsForTime)
 
-        ns.print("idk:")
-        ns.print("  execTime:             " + execTime)
-        ns.print("  lowSecHoleEnd:        " + lowSecHoleEnd)
-        ns.print("  firstBatchExecTime:   " + firstBatchExecTime)
-        ns.print("  firstBatchLanch:      " + firstBatchLanch)
-        ns.print("  firstBatchDeltaLanch: " + firstBatchDeltaLanch)
-        ns.print("  maxShells:            " + maxShells)
-        ns.print("  maxShellsForTime:     " + maxShellsForTime)
-        ns.print("  weaken time:          " + ns.getWeakenTime(target))
-        ns.print("  now:                  " + Date.now())
+        // ns.print("idk:")
+        // ns.print("  execTime:             " + execTime)
+        // ns.print("  lowSecHoleEnd:        " + lowSecHoleEnd)
+        // ns.print("  firstBatchExecTime:   " + firstBatchExecTime)
+        // ns.print("  firstBatchLanch:      " + firstBatchLanch)
+        // ns.print("  firstBatchDeltaLanch: " + firstBatchDeltaLanch)
+        // ns.print("  maxShells:            " + maxShells)
+        // ns.print("  maxShellsForTime:     " + maxShellsForTime)
+        // ns.print("  weaken time:          " + ns.getWeakenTime(target))
+        // ns.print("  now:                  " + Date.now())
 
         let batchData
 
@@ -187,7 +198,7 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads, loggingPortHandle
         // ns.tprintf(logEntry.toStr())
         loggingPortHandle.write(logEntry.toStr())
 
-        ns.print("shot " + maxShells + " shells at " + execTime.toFixed(0))
+        // ns.print("shot " + maxShells + " shells at " + execTime.toFixed(0))
 
         // push the folowing batches to the next shotgun
         execTime += execMargin
@@ -200,10 +211,10 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads, loggingPortHandle
         secHoleStart = getNextSecHole(Date.now())
         await ns.sleep(secHoleStart - Date.now())
 
-        ns.print(`oldHole:     ${oldHole}`)
-        ns.print(`nextHole:    ${secHoleStart}`)
-        ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
-        ns.print(`actuallTime: ${Date.now() - oldTime}`)
+        // ns.print(`oldHole:     ${oldHole}`)
+        // ns.print(`nextHole:    ${secHoleStart}`)
+        // ns.print(`sleepTime:   ${secHoleStart - oldTime}`)
+        // ns.print(`actuallTime: ${Date.now() - oldTime}`)
     }
 }
 

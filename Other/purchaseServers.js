@@ -1,7 +1,24 @@
 /** @param {NS} ns */
-export async function purchaseMaxServers(ns, moneyAvalible = null) {
-    if (moneyAvalible == null) {
-        moneyAvalible = ns.getServerMoneyAvailable("home")
+function getServerName(ns, ramPow) {
+    const myServers = ns.getPurchasedServers()
+
+    let j = 0
+    while (true) {
+        const possibleName = "pserver-2^" + ramPow + "-" + j
+
+        if (!myServers.includes(possibleName)) {
+            return possibleName
+        }
+
+        j++
+    }
+}
+
+
+/** @param {NS} ns */
+export async function purchaseMaxServers(ns, moneyAvailable = null) {
+    if (moneyAvailable == null) {
+        moneyAvailable = ns.getServerMoneyAvailable("home")
     }
 
     const maxRam = ns.getPurchasedServerMaxRam()
@@ -18,15 +35,13 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
                 break
             }
 
-            if (ns.getPurchasedServerCost(Math.pow(2, i)) > moneyAvalible) {
+            if (ns.getPurchasedServerCost(Math.pow(2, i)) > moneyAvailable) {
                 i--
                 break
             }
 
             i++
         }
-
-        // ns.tprint("--|", i)
 
         if (i == 0) {
             // cant buy any servers
@@ -36,18 +51,26 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
         const ram = Math.pow(2, i)
         const cost = ns.getPurchasedServerCost(ram)
 
-        // can buy more servers
         if (myServers.length < ns.getPurchasedServerLimit()) {
-            moneyAvalible -= cost
+            // can buy new servers
+            moneyAvailable -= cost
+
+            const newServerName = getServerName(ns, i)
+
+            ns.purchaseServer(newServerName, i)
+
+            ns.tprintf(`purchased server (${newServerName})`)
 
         } else {
+            // must upgrade old servers
+
             let smallest = myServers[0]
             for (let j = 1; j < myServers.length; j++) {
                 const pServerName = myServers[j]
                 // ns.tprint(j, pServerName, " ", smallest)
                 // ns.tprint("  ", ns.getServerMaxRam(pServerName))
                 // ns.tprint("  ", ns.getServerMaxRam(smallest))
-                
+
 
                 if (ns.getServerMaxRam(pServerName) < ns.getServerMaxRam(smallest)) {
                     smallest = pServerName
@@ -58,20 +81,12 @@ export async function purchaseMaxServers(ns, moneyAvalible = null) {
 
             if (ram > ns.getServerMaxRam(smallest)) {
                 ns.upgradePurchasedServer(smallest, ram)
-                let j = 0
-                let possibleName = "pserver-2^" + i
-                while (true) {
-                    if (!myServers.includes(possibleName)) {
-                        ns.renamePurchasedServer(smallest, possibleName)
-                        break
-                    }
 
-                    possibleName = "pserver-2^" + i + "-" + j
-                    j++
-                }
+                const newServerName = getServerName(ns, i)
 
-                ns.tprint(smallest, possibleName, ram)
-                moneyAvalible -= cost
+                ns.tprintf(`upgraded server (${smallest} => ${newServerName})`)
+
+                moneyAvailable -= cost
 
             } else {
                 break

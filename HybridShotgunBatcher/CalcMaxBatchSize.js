@@ -2,7 +2,7 @@ import { Threads } from "HybridShotgunBatcher/Helpers"
 import { estimateX } from "Helpers/EstimateX"
 
 /** @param {NS} ns */
-export function getMaxHackThreads(ns, target, avalibleRam) {
+export function getMaxHackThreads(ns, target, availableRam) {
     // returns maxThreads, maxCycles, isOptimalThreads
     // maxThreads := how many threads of each you can have per cycle
     // maxCycles := how many paralell cycles can be run at once
@@ -43,7 +43,7 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
 
     // if the margin is less than 4 (larger than -4) can leed to it 
     // getting stuck due to the rounding of threads in hackThreadsToRam()
-    estimateX(ns, hackThreadsToRam, avalibleRam, 0, hackForHalf, -10, 0)
+    estimateX(ns, hackThreadsToRam, availableRam, 0, hackForHalf, -10, 0)
 
     threads.hack = Math.floor(threads.hack)
 
@@ -51,7 +51,7 @@ export function getMaxHackThreads(ns, target, avalibleRam) {
         return [threads, 1, false]
     }
 
-    const mul = Math.floor(avalibleRam / threads.ramUsage())
+    const mul = Math.floor(availableRam / threads.ramUsage())
 
     const isOptimalThreads = hackForHalf - threads.hack <= 1
 

@@ -6,7 +6,7 @@ export function bigFormatNum(num, p_precision = 2) {
   var exponent = Math.round(Math.log10(num));
   const suf_pos = Math.floor(exponent / 3)
 
-  const sufixes = ["", "k", "m", "b", "t"]
+  const suffixes = ["", "k", "m", "b", "t"]
 
   var exponent = Math.round(Math.log10(num));
 
@@ -15,7 +15,7 @@ export function bigFormatNum(num, p_precision = 2) {
     var rounded_number = (num * (Math.pow(10, -exponent))).toFixed(p_precision)
     return rounded_number + " x 10^" + exponent
   } else {
-    var sufix = sufixes[suf_pos]
+    var suffix = suffixes[suf_pos]
 
 
     var log_pow_corrector = Math.ceil(-exponent / 3) * 3
@@ -28,6 +28,6 @@ export function bigFormatNum(num, p_precision = 2) {
     var rounded_number = rounded_number.replace(/\.0+$/, '')
     var rounded_number = rounded_number.replace(/\.\.+$/, '')
 
-    return rounded_number + sufix
+    return rounded_number + suffix
   }
 }

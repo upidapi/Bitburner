@@ -4,7 +4,7 @@ import {
     // sleepMargin,
     lowSecHoleTime,
     minDeltaBatchExec,
-    maxShotgunShels
+    maxShotgunShells
 } from "HybridShotgunBatcher/Settings"
 
 export const RamUsage = {
@@ -39,7 +39,7 @@ export class Threads {
 
 /** @param {NS} ns */
 export function distributeThreads(ns, servers, script_name, threads, ...args) {
-    // distrubutes the script over multiple servers to get a total threads "threads"
+    // distributes the script over multiple servers to get a total threads "threads"
     if (threads == 0) {
         return
     }
@@ -56,9 +56,9 @@ export function distributeThreads(ns, servers, script_name, threads, ...args) {
         let serverName = serversAndRam[i][0]
         let serverRam = serversAndRam[i][1]
 
-        if (serverName == ns.getHostname()) {
-            continue
-        }
+        // if (serverName == ns.getHostname()) {
+        //     continue
+        // }
 
         if (!ns.hasRootAccess(serverName)) {
             continue
@@ -66,7 +66,7 @@ export function distributeThreads(ns, servers, script_name, threads, ...args) {
 
         let maxThreads = Math.floor(serverRam / scriptRam)
         let handledThreads = Math.min(maxThreads, threads)
-        // disThreads i.e distrubuted threads
+        // disThreads i.e distributed threads
         threads -= handledThreads
 
         // ns.print(maxThreads, " ", handledThreads, " ", threads)
@@ -104,7 +104,7 @@ export function distributeThreads(ns, servers, script_name, threads, ...args) {
 
 /** @param {NS} ns */
 export function getAvailableRam(ns, servers) {
-    let serverAvalibleRam = 0
+    let serveravailableRam = 0
 
     const hoasName = ns.getHostname()
     for (let i = 0; i < servers.length; i++) {
@@ -120,30 +120,30 @@ export function getAvailableRam(ns, servers) {
             continue
         }
 
-        let avalibeRam = ns.getServerMaxRam(server_name) - ns.getServerUsedRam(server_name)
+        let availableRam = ns.getServerMaxRam(server_name) - ns.getServerUsedRam(server_name)
 
         // remove 2 gb from each server
 
-        // if we don't do this the avalible ram might spread out on several servers 
+        // if we don't do this the available ram might spread out on several servers 
         // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
-        // this would result in a total avalible ram of 3.
+        // this would result in a total available ram of 3.
         // that would make it beleave it has space for another hack thread (1.6 gb of ram)
         // but no server has enough ram fo it 
         // resulting in the proces chrashing
 
-        // threrfor we remove ram from the avalible ram
-        let avalibeRamWithMargins = Math.max(0, avalibeRam - 2)
+        // threrfor we remove ram from the available ram
+        let availableRamWithMargins = Math.max(0, availableRam - 2)
 
-        serverAvalibleRam += avalibeRamWithMargins
+        serveravailableRam += availableRamWithMargins
     }
 
-    return serverAvalibleRam
+    return serveravailableRam
 }
 
-export function maxAvalibleRam(ns, servers) {
-    let serverAvalibleRam = 0
+export function maxAvailableRam(ns, servers) {
+    let serverAvailableRam = 0
 
-    const hoasName = ns.getHostname()
+    const HostName = ns.getHostname()
     for (let i = 0; i < servers.length; i++) {
         let server_name = servers[i]
 
@@ -151,30 +151,30 @@ export function maxAvalibleRam(ns, servers) {
             continue
         }
 
-        // todo maby remove this
-        if (server_name == hoasName) {
-            // due to stability reasones the script realy shuld not spawn "wgh threads" on the server it's on
-            continue
-        }
+        // // todo maybe remove this
+        // if (server_name == hostName) {
+        //     // due to stability reasons the script really should not spawn "wgh threads" on the server it's on
+        //     continue
+        // }
 
-        let avalibeRam = ns.getServerMaxRam(server_name)
+        let availableRam = ns.getServerMaxRam(server_name)
 
         // remove 2 gb from each server
 
-        // if we don't do this the avalible ram might spread out on several servers 
+        // if we don't do this the available ram might spread out on several servers 
         // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
-        // this would result in a total avalible ram of 3.
-        // that would make it beleave it has space for another hack thread (1.6 gb of ram)
+        // this would result in a total available ram of 3.
+        // that would make it believe it has space for another hack thread (1.6 gb of ram)
         // but no server has enough ram fo it 
-        // resulting in the proces chrashing
+        // resulting in the process crashing
 
-        // threrfor we remove ram from the avalible ram
-        let avalibeRamWithMargins = Math.max(0, avalibeRam - 2)
+        // therefore we remove ram from the available ram
+        let availableRamWithMargins = Math.max(0, availableRam - 2)
 
-        serverAvalibleRam += avalibeRamWithMargins
+        serverAvailableRam += availableRamWithMargins
     }
 
-    return serverAvalibleRam
+    return serverAvailableRam
 }
 
 import { WGHData, BatchData } from "HybridShotgunBatcher/Dashboard/DataClasses";
@@ -189,11 +189,11 @@ export async function startBatch(ns,
     servers,
     execTime = null
 ) {
-    // resturns if the 
+    // returns if the 
 
-    const wTime = ns.getWeakenTime()
-    const gTime = ns.getGrowTime()
-    const hTime = ns.getHackTime()
+    const wTime = ns.getWeakenTime(target)
+    const gTime = ns.getGrowTime(target)
+    const hTime = ns.getHackTime(target)
 
     /**   
      * now W G    H  execTime
@@ -205,7 +205,7 @@ export async function startBatch(ns,
      *  Msec      2 * WGHMargin
      *               |--|
      *            3 * WGHMargin
-     * (Msec i.e aditionalMsec)
+     * (Msec i.e additionalMsec)
      */
 
 
@@ -252,11 +252,11 @@ export async function startBatch(ns,
         throw new Error(errorMsg)
     }
 
-    ns.printf("satarting batch at %i", Date.now())
-    ns.printf("    to lanch %i", toWStart)
-    ns.printf("    to exec %i", toExec)
-    ns.printf("    lanch time %i", Date.now() + toWStart)
-    ns.printf("    exec time %i", execTime)
+    // ns.printf("starting batch at %i", Date.now())
+    // ns.printf("    to launch %i", toWStart)
+    // ns.printf("    to exec %i", toExec)
+    // ns.printf("    launch time %i", Date.now() + toWStart)
+    // ns.printf("    exec time %i", execTime)
 
     // ns.tprint(toWStart)
     // ns.tprint(deltaWStart, " ", deltaGStart, " ", deltaHStart)

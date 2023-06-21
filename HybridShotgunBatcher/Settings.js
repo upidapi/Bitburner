@@ -32,7 +32,7 @@ export const execMargin = 100
  * if they all get offset by 1 ms, the worst case seanrio is this => 
  * * | | * * * * | | * * * * | | * * (still doesn't break)
  * */
-export const WGHMargin = 4
+export const WGHMargin = 2
 
 
 /**
@@ -47,7 +47,7 @@ export const WGHMargin = 4
  * larger margin results in (sligtly) larger ram usage 
  * ( makes the script run time sleepMargin ms longer )
  */
-export const sleepMargin = 50
+export const sleepMargin = 20
 
 
 // cant sleep pecise amounts of time, therafour it's limited by the sleep margin
@@ -75,7 +75,7 @@ export const minDeltaBatchExec = WGHMargin * 3
 
 
 /**
- * this is the max amount of batches taht can be started before 
+ * this is the max amount of batches that can be started before 
  * it needs a low sec hole for them to launch the WGH
  */
-export const maxShotgunShels = Math.floor((execMargin - lowSecHoleTime) / minDeltaBatchExec)
+export const maxShotgunShells = Math.floor((execMargin - lowSecHoleTime) / minDeltaBatchExec)

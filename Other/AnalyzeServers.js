@@ -3,13 +3,13 @@ import {
   getServers
 } from "Other/ScanServers.js"
 
-import { getMaxHackThreads, getAvalibleRamWGH } from "Hacking/Hack.js"
+import { getMaxHackThreads, getAvailableRamWGH } from "Hacking/Hack.js"
 import { bigFormatNum } from "Helpers/Formatting"
 
 import { getRoot } from "Hacking/GetRoot.js"
 
 import { getMinSecWeakenTime } from "Helpers/MyFormulas.js"
-import { getAvailableRam, maxAvalibleRam } from "HybridShotgunBatcher/Helpers"
+import { getAvailableRam, maxAvailableRam } from "HybridShotgunBatcher/Helpers"
 
 /** @param {NS} ns */
 export async function depthScanAnalyze(ns) {
@@ -60,25 +60,24 @@ export async function depthScanAnalyze(ns) {
 
 
 /** @param {NS} ns */
-export function calcEstimatedMoney(ns, serverName, avalibleRam) {
+export function calcEstimatedMoney(ns, serverName, availableRam) {
   // get the estimated $ / hr from server
   
-  const returnVal = getMaxHackThreads(ns, serverName, avalibleRam)
+  const returnVal = getMaxHackThreads(ns, serverName, availableRam)
 
   const threads = returnVal[0]
   const nThreads = returnVal[1]
 
-  // if the thread is full, how may of thease are we using?
-  // if it's not full this will alwais be 1
+  // if the thread is full, how may of these are we using?
+  // if it's not full this will always be 1
 
   const hackThreads = threads.hack * nThreads
 
-  const a = (100 - ns.getServerSecurityLevel(serverName)) / 100
-  const b = (100 - ns.getServerMinSecurityLevel(serverName)) / 100
+  // const a = (100 - ns.getServerSecurityLevel(serverName)) / 100
+  const hackChance = (100 - ns.getServerMinSecurityLevel(serverName)) / 100
 
-  const minDifficultyCorrector = b / a
+  const pMoneyHacked  = ns.hackAnalyze(serverName) * hackChance
 
-  const pMoneyHacked  = ns.hackAnalyze(serverName) / minDifficultyCorrector
   const money_per_cycle = hackThreads * pMoneyHacked * ns.getServerMaxMoney(serverName)
 
   const cycle_time = getMinSecWeakenTime(ns, serverName)
@@ -93,9 +92,9 @@ export function calcEstimatedMoney(ns, serverName, avalibleRam) {
 export async function scanAnalyzeServers(ns) {
   const servers = getServers(ns, "home")
 
-  let avalibleRam = maxAvalibleRam(ns, servers)
+  let availableRam = maxAvailableRam(ns, servers)
 
-  let serversData = servers.map((server_name) => { return calcEstimatedMoney(ns, server_name, avalibleRam)})
+  let serversData = servers.map((server_name) => { return calcEstimatedMoney(ns, server_name, availableRam)})
 
   serversData = serversData.sort((a, b) => { return a[1] - b[1] })
 
@@ -112,7 +111,7 @@ export async function scanAnalyzeServers(ns) {
   //todo implement this
   for (let i = 0; i < serversData.length; i++) {
     let serverName = serversData[i][0]
-    let serverEstimetedMoney = serversData[i][1]
+    let serverEstimatedMoney = serversData[i][1]
 
     await getRoot(ns, serverName)
 
@@ -121,7 +120,7 @@ export async function scanAnalyzeServers(ns) {
     terminalDataPrint("Root Access: ", ns.hasRootAccess(serverName))
     terminalDataPrint("lvl req: ", ns.getServerRequiredHackingLevel(serverName))
 
-    terminalDataPrint("estimeted money/hr: ", bigFormatNum(serverEstimetedMoney))
+    terminalDataPrint("estimated money/hr: ", bigFormatNum(serverEstimatedMoney))
 
     terminalDataPrint(
       "money: $",

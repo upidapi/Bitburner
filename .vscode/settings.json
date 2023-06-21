@@ -10,4 +10,12 @@
         "jsconfig.json": true,
         "NetscriptDefinitions.d.ts": true,
     },
+    "cSpell.words": [
+        "brutessh",
+        "ftpcrack",
+        "httpworm",
+        "padd",
+        "sqlinject",
+        "tprintf"
+    ],
 }

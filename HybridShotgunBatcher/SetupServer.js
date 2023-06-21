@@ -7,7 +7,7 @@ import {
   // sleepMargin,
   lowSecHoleTime,
   minDeltaBatchExec,
-  maxShotgunShels
+  maxShotgunShells
 } from "HybridShotgunBatcher/Settings"
 
 /** @param {NS} ns */
@@ -58,7 +58,7 @@ import { RamUsage } from "HybridShotgunBatcher/Helpers"
 
 /** @param {NS} ns */
 export async function fixSecurity(ns, target, servers, availableRam) {
-  // fixes the security as mutch as possible 
+  // fixes the security as much as possible 
   // returns true if the process to fix it will fully fix it or if it's already fixed
 
   if (availableRam == 0) {
@@ -135,7 +135,7 @@ export async function fixMoney(ns, target, servers, availableRam) {
 
     let threads = new Threads()
 
-    // nothing is set to the result since it alredy sets the properties of "threads"
+    // nothing is set to the result since it already sets the properties of "threads"
     estimateX(ns, growPToRam, availableRam, 1, maxMul, 0, 0.1)
 
     // defined before rounding the threads
@@ -145,7 +145,7 @@ export async function fixMoney(ns, target, servers, availableRam) {
 
     const moneyP = (serverMoney / maxServerMoney).toFixed(2)
     ns.print("fixing money with " + threads.grow + " threads")
-    ns.print("    money: " + serverMoney.toFixed(0) + "/" + maxServerMoney + " " + moneyP + "%")
+    ns.print(`    money: ${bigFormatNum(serverMoney, 3)}/${bigFormatNum(maxServerMoney, 3)} ${moneyP}%`)
     ns.print("    optimal grow: " + Math.ceil(ns.growthAnalyze(target, maxMul)))
     ns.print("    grow threads: " + threads.grow)
     ns.print("    availableRam: " + availableRam)
@@ -165,6 +165,7 @@ export async function fixMoney(ns, target, servers, availableRam) {
 }
 
 import { getServers } from "Other/ScanServers"
+import { bigFormatNum } from "Helpers/Formatting"
 
 /** @param {NS} ns */
 export async function fixServer(ns, target) {
@@ -180,17 +181,17 @@ export async function fixServer(ns, target) {
   while (true) {
     await ns.sleep(100)
 
-    let avalibleRam = getAvailableRam(ns, servers)
+    let availableRam = getAvailableRam(ns, servers)
 
-    let secRetVal = await fixSecurity(ns, target, servers, avalibleRam)
+    let secRetVal = await fixSecurity(ns, target, servers, availableRam)
 
     if (secRetVal == 0) {
       continue
     }
 
-    avalibleRam = getAvailableRam(ns, servers)
+    availableRam = getAvailableRam(ns, servers)
 
-    let moneyRetVal = await fixMoney(ns, target, servers, avalibleRam)
+    let moneyRetVal = await fixMoney(ns, target, servers, availableRam)
 
     if (moneyRetVal == 0) {
       continue

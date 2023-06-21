@@ -12,7 +12,7 @@ export function estimateX(ns, func, y, min, max, left_margin = 0, right_margin =
   
     // the current x := func(x) that is the closest to y
   
-    let iteratins = 0
+    let i = 0
   
     // check if above or below
     if (func(max) < y + left_margin) {
@@ -47,11 +47,14 @@ export function estimateX(ns, func, y, min, max, left_margin = 0, right_margin =
         min = cur
       }
   
-      iteratins++
+      i++
   
-      if (iteratins > 100) {
-        ns.printf("reatched max iterations, returning current value anyways")
+      if (i > 100) {
+        ns.printf("reached max iterations, returning current value")
+        ns.printf(`    target:  ${y}`)
+        ns.printf(`    left margin:  ${left_margin}  right margin: ${right_margin}`)
         ns.printf("    min: " + min + " func(min): " + func(min))
+        ns.printf("    cur: " + cur + " func(cur): " + func(cur))
         ns.printf("    max: " + max + " func(max): " + func(max))
         return cur 
         // throw new Error("could not locate x. min: " + min + " max: " + max + " y: " + y)
