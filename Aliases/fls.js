@@ -6,8 +6,8 @@ import { printFileStruct } from "Other/FileBrowser.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
-    const hoast = ns.getHostname()
-    let allDirs = ns.ls(hoast)
+    const host = ns.getHostname()
+    let allDirs = ns.ls(host)
 
     printFileStruct(ns, allDirs)
 }

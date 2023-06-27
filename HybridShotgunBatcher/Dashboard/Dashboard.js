@@ -513,7 +513,7 @@ export async function main(ns) {
         // todo draw the "now" line 
         p5.background(0)
 
-        const toDraw = filterShown(guiData, things, true)
+        const toDraw = filterShown(guiData, things, false)
 
         drawer.drawAll(toDraw)
     }

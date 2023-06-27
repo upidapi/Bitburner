@@ -4,7 +4,7 @@ export class WGHData {
      * @param {number} duration 
      * @param {number} aSec 
      */
-    constructor(WGHType, duration, threads, aSec = 0) { // possebly add threads
+    constructor(WGHType, duration, threads, aSec = 0) { // possibly add threads
         this.WGHType = WGHType
         this.duration = duration
         this.threads = threads
@@ -57,10 +57,10 @@ export class LogEntry {
      * @param {number} startTime 
      * @param {WGHData | BatchData | ShotgunData} data 
      */
-    constructor(startTime, data, dataClass=null) {
+    constructor(startTime, data, dataClass = null) {
         this.startTime = startTime
         this.data = data
-        this.dataClass = dataClass // only for stringifying
+        this.dataClass = dataClass // only for signifying
     }
 
     toStr() {
@@ -122,6 +122,7 @@ function convertToObject(objData, objClass) {
 }
 
 export function strToLog(strData) {
+    console.log(strData)
     const data = JSON.parse(strData)
     return convertToObject(data, "LogEntry")
 }

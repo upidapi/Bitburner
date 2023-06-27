@@ -1,3 +1,7 @@
+// the amount of ram to be reserved on host when distributing WGH threads 
+const hostRamMargin = 100
+
+
 import {
     execMargin,
     WGHMargin,
@@ -38,7 +42,162 @@ export class Threads {
 
 
 /** @param {NS} ns */
-export function distributeThreads(ns, servers, script_name, threads, ...args) {
+export function getServerAvailableRam(ns, server) {
+    return ns.getServerMaxRam(server) - ns.getServerUsedRam(server)
+}
+
+
+/** 
+ * @param {NS} ns 
+ * @returns {Array<string>}
+*/
+export function getAvailableWGHServers(ns) {
+    // gets the possible servers for WGH distribution
+
+    const hostName = ns.getHostname()
+
+    const allServers = getServers(ns)
+
+    const availableServers = allServers.filter(
+        (x) => {
+            if (x == ns.getHostname()) {
+                return false
+            }
+
+            if (!ns.hasRootAccess(x)) {
+                return false
+            }
+
+            return true
+        }
+    )
+
+    const serverRam = availableServers.reduce(
+        (partialSum, serverName) =>
+            partialSum + Math.max(0, ns.getServerMaxRam(serverName) - 2)
+    )
+
+    // check if the amount of ram on the servers is lees than the ram on home
+    // if so add home as a possibility for WGH thread distribution 
+    const hostTotalAvailableRam = getServerAvailableRam(ns, hostName)
+    const hostAvailableRam = Math.max(0, hostTotalAvailableRam - hostRamMargin)
+
+    if (serverRam < hostAvailableRam) {
+        return [...availableServers, hostName]
+    }
+
+    return availableServers
+}
+
+/** 
+ * @param {NS} ns 
+*/
+function getServersAndRam(ns) {
+    const servers = getAvailableWGHServers(ns)
+    const hostName = ns.getHostname()
+
+    const serversAndRam = []
+
+    for (let i = 0; i < servers.length; i++) {
+        const serverName = servers[i]
+        const totServerRam = getServerAvailableRam(ns, serverName)
+        let serverRam
+
+        if (serverName == hostName) {
+            // it's very annoying having no ram on hostName (home)
+            // therefor reserve some ram on hostName (home)
+            serverRam = totServerRam - hostRamMargin
+        } else {
+
+            // remove 2 gb from each server
+
+            // if we don't do this the available ram might spread out on several servers 
+            // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
+            // this would result in a total available ram of 3.
+            // that would make it believe it has space for another hack thread (1.6 gb of ram)
+            // but no server has enough ram fo it 
+            // resulting in the process crashing
+
+            // therefor we remove ram from the available ram
+            serverRam = totServerRam - 2
+        }
+
+        serversAndRam.push([serverName, Math.max(0, serverRam)])
+    }
+
+    return serversAndRam
+}
+
+
+/** 
+ * @param {NS} ns 
+*/
+function getServersAndMaxRam(ns) {
+    const servers = getAvailableWGHServers(ns)
+    const hostName = ns.getHostname()
+
+    const serversAndRam = []
+
+    for (let i = 0; i < servers.length; i++) {
+        const serverName = servers[i]
+        const totServerRam = ns.getServerMaxRam(serverName)
+        let serverRam
+
+        if (serverName == hostName) {
+            // it's very annoying having no ram on hostName (home)
+            // therefor reserve some ram on hostName (home)
+            serverRam = totServerRam - hostRamMargin
+        } else {
+
+            // remove 2 gb from each server
+
+            // if we don't do this the available ram might spread out on several servers 
+            // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
+            // this would result in a total available ram of 3.
+            // that would make it believe it has space for another hack thread (1.6 gb of ram)
+            // but no server has enough ram fo it 
+            // resulting in the process crashing
+
+            // therefor we remove ram from the available ram
+            serverRam = totServerRam - 2
+        }
+
+        serversAndRam.push([serverName, Math.max(0, serverRam)])
+    }
+
+    return serversAndRam
+}
+
+/** @param {NS} ns */
+export function getMaxAvailableRam(ns) {
+    const serversAndRam = getServersAndMaxRam(ns)
+
+    let availableRam = 0
+
+    serversAndRam.forEach(
+        (x) => availableRam += x[1]
+    )
+
+    return availableRam
+}
+
+
+/** @param {NS} ns */
+export function getAvailableRam(ns) {
+    const serversAndRam = getServersAndRam(ns)
+
+    let availableRam = 0
+
+    serversAndRam.forEach(
+        (x) => availableRam += x[1]
+    )
+
+    return availableRam
+}
+
+
+/** @param {NS} ns */
+export function distributeThreads(ns, script_name, threads, ...args) {
     // distributes the script over multiple servers to get a total threads "threads"
     if (threads == 0) {
         return
@@ -46,23 +205,15 @@ export function distributeThreads(ns, servers, script_name, threads, ...args) {
 
     const scriptRam = ns.getScriptRam(script_name)
 
-    let serversAndRam = servers.map(server => [server, ns.getServerMaxRam(server) - ns.getServerUsedRam(server)])
+    let serversAndRam = getServersAndRam(ns)
     // sort servers_and_ram so that it tries the larges servers first
     serversAndRam.sort((a, b) => (b[1] - a[1]))
 
     // ns.tprint(serversAndRam[0], serversAndRam.slice(-1))
-    for (let i = 0; i < servers.length; i++) {
+    for (let i = 0; i < serversAndRam.length; i++) {
         // ns.print(serversAndRam[i])
         let serverName = serversAndRam[i][0]
         let serverRam = serversAndRam[i][1]
-
-        // if (serverName == ns.getHostname()) {
-        //     continue
-        // }
-
-        if (!ns.hasRootAccess(serverName)) {
-            continue
-        }
 
         let maxThreads = Math.floor(serverRam / scriptRam)
         let handledThreads = Math.min(maxThreads, threads)
@@ -85,7 +236,7 @@ export function distributeThreads(ns, servers, script_name, threads, ...args) {
         }
     }
 
-    serversAndRam = servers.map(server => [server, ns.getServerMaxRam(server) - ns.getServerUsedRam(server)])
+    serversAndRam = getServersAndRam(ns)
     // sort servers_and_ram so that it tries the larges servers first
     serversAndRam.sort((a, b) => (b[1] - a[1]))
 
@@ -102,82 +253,9 @@ export function distributeThreads(ns, servers, script_name, threads, ...args) {
 }
 
 
-/** @param {NS} ns */
-export function getAvailableRam(ns, servers) {
-    let serveravailableRam = 0
-
-    const hoasName = ns.getHostname()
-    for (let i = 0; i < servers.length; i++) {
-        let server_name = servers[i]
-
-        if (!ns.hasRootAccess(server_name)) {
-            continue
-        }
-
-        // todo maby remove this
-        if (server_name == hoasName) {
-            // due to stability reasones the script realy shuld not spawn "wgh threads" on the server it's on
-            continue
-        }
-
-        let availableRam = ns.getServerMaxRam(server_name) - ns.getServerUsedRam(server_name)
-
-        // remove 2 gb from each server
-
-        // if we don't do this the available ram might spread out on several servers 
-        // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
-        // this would result in a total available ram of 3.
-        // that would make it beleave it has space for another hack thread (1.6 gb of ram)
-        // but no server has enough ram fo it 
-        // resulting in the proces chrashing
-
-        // threrfor we remove ram from the available ram
-        let availableRamWithMargins = Math.max(0, availableRam - 2)
-
-        serveravailableRam += availableRamWithMargins
-    }
-
-    return serveravailableRam
-}
-
-export function maxAvailableRam(ns, servers) {
-    let serverAvailableRam = 0
-
-    const HostName = ns.getHostname()
-    for (let i = 0; i < servers.length; i++) {
-        let server_name = servers[i]
-
-        if (!ns.hasRootAccess(server_name)) {
-            continue
-        }
-
-        // // todo maybe remove this
-        // if (server_name == hostName) {
-        //     // due to stability reasons the script really should not spawn "wgh threads" on the server it's on
-        //     continue
-        // }
-
-        let availableRam = ns.getServerMaxRam(server_name)
-
-        // remove 2 gb from each server
-
-        // if we don't do this the available ram might spread out on several servers 
-        // ex (server 1) ram: 1, (server 2) ram: 1, (server 3) ram: 1
-        // this would result in a total available ram of 3.
-        // that would make it believe it has space for another hack thread (1.6 gb of ram)
-        // but no server has enough ram fo it 
-        // resulting in the process crashing
-
-        // therefore we remove ram from the available ram
-        let availableRamWithMargins = Math.max(0, availableRam - 2)
-
-        serverAvailableRam += availableRamWithMargins
-    }
-
-    return serverAvailableRam
-}
-
 import { WGHData, BatchData } from "HybridShotgunBatcher/Dashboard/DataClasses";
+import { getServers } from "Other/ScanServers";
+
 
 /** 
  * @param {NS} ns 
@@ -260,21 +338,21 @@ export async function startBatch(ns,
 
     // ns.tprint(toWStart)
     // ns.tprint(deltaWStart, " ", deltaGStart, " ", deltaHStart)
-    distributeThreads(ns, servers,
+    distributeThreads(ns,
         "HybridShotgunBatcher/ThreadScripts/Weaken.js",
         threads.weaken,
         target,
         toWStart,
         Date.now() + toExec + wTime)
 
-    distributeThreads(ns, servers,
+    distributeThreads(ns,
         "HybridShotgunBatcher/ThreadScripts/Grow.js",
         threads.grow,
         target,
         toGStart,
         Date.now() + toExec + gTime)
 
-    distributeThreads(ns, servers,
+    distributeThreads(ns,
         "HybridShotgunBatcher/ThreadScripts/Hack.js",
         threads.hack,
         target,

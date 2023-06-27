@@ -57,7 +57,7 @@ export async function purchaseMaxServers(ns, moneyAvailable = null) {
 
             const newServerName = getServerName(ns, i)
 
-            ns.purchaseServer(newServerName, i)
+            ns.purchaseServer(newServerName, ram)
 
             ns.tprintf(`purchased server (${newServerName})`)
 
@@ -83,6 +83,7 @@ export async function purchaseMaxServers(ns, moneyAvailable = null) {
                 ns.upgradePurchasedServer(smallest, ram)
 
                 const newServerName = getServerName(ns, i)
+                ns.renamePurchasedServer(smallest, newServerName)
 
                 ns.tprintf(`upgraded server (${smallest} => ${newServerName})`)
 
