@@ -1,6 +1,6 @@
 // an improved file browser
 
-import { sortDirs } from "Other/FIleSystem"
+import { sortDirs, sDiff } from "Other/FileSystem"
 
 /** @param {NS} ns */
 export async function printFileStruct(ns, directories) {
@@ -10,12 +10,12 @@ export async function printFileStruct(ns, directories) {
     for (let i = 0; i < allFiles.length; i++) {
         const file = allFiles[i]
         const sFile = file.split("/")
-        
+
         const result = sDiff(sLastFolder, sFile)
-        
+
         const file_diff = result[1]
         const same = result[2]
-        
+
         let depth = 0
         let padding = ""
 
@@ -27,7 +27,7 @@ export async function printFileStruct(ns, directories) {
 
             ns.tprintf(padding + folder + "/")
         }
-    
+
         depth = file.split("/").length
         padding = Array(depth).join("  ")
         ns.tprintf(padding + file.split("/").slice(-1))

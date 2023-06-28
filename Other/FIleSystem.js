@@ -38,7 +38,7 @@ export function getDirContends(dir, allDirs) {
     return [...folderContent].sort()
 }
 
-function sDiff(a, b) {
+export function sDiff(a, b) {
     const min_len = Math.min(a.length, b.length)
 
     for (let i = 0; i < min_len; i++) {
@@ -57,7 +57,7 @@ function sDiff(a, b) {
  * @returns {Array<string>}
  * dirs sorted based on the directory's sub file names
  */
-export function sortDirs() {
+export function sortDirs(dirs) {
     return dirs.sort((a, b) => {
 
         let result = sDiff(a, b)
