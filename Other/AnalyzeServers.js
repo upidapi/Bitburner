@@ -5,7 +5,7 @@ import {
 
 // import { getMaxHackThreads, getAvailableRamWGH } from "Hacking/Hack.js"
 import { getMaxHackThreads } from "HybridShotgunBatcher/CalcMaxBatchSize"
-import { bigFormatNum } from "Helpers/Formatting"
+import { formatNum } from "Helpers/Formatting"
 
 import { getRoot } from "Hacking/GetRoot.js"
 
@@ -45,9 +45,9 @@ export async function depthScanAnalyze(ns) {
 
         padd_print(
             "money: $",
-            bigFormatNum(ns.getServerMoneyAvailable(server_name)),
+            formatNum(ns.getServerMoneyAvailable(server_name)),
             " / $",
-            bigFormatNum(ns.getServerMaxMoney(server_name)))
+            formatNum(ns.getServerMaxMoney(server_name)))
 
         padd_print(
             "sec lvl: ",
@@ -130,13 +130,13 @@ export async function scanAnalyzeServers(ns) {
         terminalDataPrint("Root Access: ", ns.hasRootAccess(serverName))
         terminalDataPrint("lvl req: ", ns.getServerRequiredHackingLevel(serverName))
 
-        terminalDataPrint("estimated money/hr: ", bigFormatNum(serverEstimatedMoney))
+        terminalDataPrint("estimated money/hr: ", formatNum(serverEstimatedMoney))
 
         terminalDataPrint(
             "money: $",
-            bigFormatNum(ns.getServerMoneyAvailable(serverName)),
+            formatNum(ns.getServerMoneyAvailable(serverName)),
             " / $",
-            bigFormatNum(ns.getServerMaxMoney(serverName)))
+            formatNum(ns.getServerMaxMoney(serverName)))
 
         terminalDataPrint(
             "sec lvl: ",

@@ -31,7 +31,7 @@ function getNextSecHole(time = null) {
     return nextHole
 }
 
-import { bigFormatNum } from "Helpers/Formatting"
+import { formatNum } from "Helpers/Formatting"
 
 /** @param {NS} ns */
 async function hybridShotgunLoop(ns, target, fullBatchThreads, loggingPortHandle) {
@@ -101,8 +101,8 @@ async function hybridShotgunLoop(ns, target, fullBatchThreads, loggingPortHandle
         if (ns.getServerMaxMoney(target) - ns.getServerMoneyAvailable(target) != 0) {
             // server money not max
 
-            const serverMoney = bigFormatNum(ns.getServerMoneyAvailable(target), 3)
-            const serverMaxMoney = bigFormatNum(ns.getServerMaxMoney(target), 3)
+            const serverMoney = formatNum(ns.getServerMoneyAvailable(target), 3)
+            const serverMaxMoney = formatNum(ns.getServerMaxMoney(target), 3)
             const moneyP = (ns.getServerMoneyAvailable(target) / ns.getServerMaxMoney(target)) * 100
 
             ns.print("money not max")

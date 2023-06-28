@@ -145,7 +145,7 @@ export async function fixMoney(ns, target, servers, availableRam) {
 
         const moneyP = (serverMoney / maxServerMoney).toFixed(2)
         ns.print("fixing money with " + threads.grow + " threads")
-        ns.print(`    money: ${bigFormatNum(serverMoney, 3)}/${bigFormatNum(maxServerMoney, 3)} ${moneyP}%`)
+        ns.print(`    money: ${formatNum(serverMoney, 3)}/${formatNum(maxServerMoney, 3)} ${moneyP}%`)
         ns.print("    optimal grow: " + Math.ceil(ns.growthAnalyze(target, maxMul)))
         ns.print("    grow threads: " + threads.grow)
         ns.print("    availableRam: " + availableRam)
@@ -165,7 +165,7 @@ export async function fixMoney(ns, target, servers, availableRam) {
 }
 
 import { getServers } from "Other/ScanServers"
-import { bigFormatNum } from "Helpers/Formatting"
+import { formatNum } from "Helpers/Formatting"
 
 /** @param {NS} ns */
 export async function fixServer(ns, target) {

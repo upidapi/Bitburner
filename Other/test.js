@@ -1,18 +1,8 @@
-/** @param {NS} ns */
-export async function main(ns) {
-    let servers = ns.getPurchasedServers()
-    ns.tprint(servers)
-    console.log(servers)
+// /** @param {NS} ns **/
+// export async function other(ns) {
 
-    for (let server of servers) {
-        if (server.startsWith("pserver-2^20")) {
-            continue
-        }
+// }
 
-        ns.deleteServer(server)
-    }
 
-    servers = ns.getPurchasedServers()
-    ns.tprint(servers)
-    console.log(servers)
-}
+console.log(typeof (() => 1))
+

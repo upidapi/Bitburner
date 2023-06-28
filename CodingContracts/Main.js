@@ -1,23 +1,23 @@
 import { getServers } from "Other/ScanServers";
 
-import { trianglePathSum } from "CodingContracts/TrianglePathSum";
-import { spiralizeMatrix } from "CodingContracts/SpiralizeMatrix";
-import { toHam, hamToInt } from "CodingContracts/HammingCodes";
-import { traderI, traderII, traderIII, traderIV } from "CodingContracts/AlgorithmicStockTrader";
-import { genIp } from "CodingContracts/IpGen";
-import { colourNodes } from "CodingContracts/2ColourGraph";
-import { largestPrime } from "CodingContracts/LargestPrime";
-import { findMaxSubSum } from "CodingContracts/MaxSubSum";
-import { waysToSumI, waysToSumII } from "CodingContracts/TotalWaysToSum";
-import { canJump, getMinJumps } from "CodingContracts/ArrayJumping";
-import { mergeIntervals } from "CodingContracts/MergeOverlappingIntervals";
-import { getSimpleUniquePaths, getUniquePaths } from "CodingContracts/UniqueGridPaths";
-import { getShortestPath } from "CodingContracts/ShortestPath";
-import { findValidMath } from "CodingContracts/FindMathExpressions";
-import { getSanitizedPar } from "CodingContracts/SanitizeParentheses";
-import { compressRLE } from "CodingContracts/CompressionRLE";
-import { compressLZ, decompressLZ } from "CodingContracts/CompressionLZ";
-import { ceasarCipher, vCipher } from "CodingContracts/Cipher";
+import { trianglePathSum } from "CodingContracts/Solvers/TrianglePathSum";
+import { spiralizeMatrix } from "CodingContracts/Solvers/SpiralizeMatrix";
+import { toHam, hamToInt } from "CodingContracts/Solvers/HammingCodes";
+import { traderI, traderII, traderIII, traderIV } from "CodingContracts/Solvers/AlgorithmicStockTrader";
+import { genIp } from "CodingContracts/Solvers/IpGen";
+import { colourNodes } from "CodingContracts/Solvers/2ColourGraph";
+import { largestPrime } from "CodingContracts/Solvers/LargestPrime";
+import { findMaxSubSum } from "CodingContracts/Solvers/MaxSubSum";
+import { waysToSumI, waysToSumII } from "CodingContracts/Solvers/TotalWaysToSum";
+import { canJump, getMinJumps } from "CodingContracts/Solvers/ArrayJumping";
+import { mergeIntervals } from "CodingContracts/Solvers/MergeOverlappingIntervals";
+import { getSimpleUniquePaths, getUniquePaths } from "CodingContracts/Solvers/UniqueGridPaths";
+import { getShortestPath } from "CodingContracts/Solvers/ShortestPath";
+import { findValidMath } from "CodingContracts/Solvers/FindMathExpressions";
+import { getSanitizedPar } from "CodingContracts/Solvers/SanitizeParentheses";
+import { compressRLE } from "CodingContracts/Solvers/CompressionRLE";
+import { compressLZ, decompressLZ } from "CodingContracts/Solvers/CompressionLZ";
+import { ceasarCipher, vCipher } from "CodingContracts/Solvers/Cipher";
 
 const typeToFuncMap = {
     "Minimum Path Sum in a Triangle": trianglePathSum,
@@ -50,36 +50,134 @@ const typeToFuncMap = {
 }
 
 
-// 24 / 27 done
-const allTypes = [
-    "Find Largest Prime Factor",  // done
-    "Subarray with Maximum Sum",  // done
-    "Total Ways to Sum",  // done
-    "Total Ways to Sum II",  // done
-    "Spiralize Matrix",  // done
-    "Array Jumping Game",  // done
-    "Array Jumping Game II",  // done
-    "Merge Overlapping Intervals", // done
-    "Generate IP Addresses",  // done
-    "Algorithmic Stock Trader I",  // done
-    "Algorithmic Stock Trader II",  // done
-    "Algorithmic Stock Trader III",  // done
-    "Algorithmic Stock Trader IV",  // done
-    "Minimum Path Sum in a Triangle",  // done
-    "Unique Paths in a Grid I",  // done
-    "Unique Paths in a Grid II",  // done
-    "Shortest Path in a Grid",  // done
-    "Sanitize Parentheses in Expression",  // done
-    "Find All Valid Math Expressions",  // done
-    "HammingCodes: Integer to Encoded Binary",  // done
-    "HammingCodes: Encoded Binary to Integer",  // done
-    "Proper 2-Coloring of a Graph",  // done
-    "Compression I: RLE Compression",  // done
-    "Compression II: LZ Decompression",  // done
-    "Compression III: LZ Compression",  // done
-    "Encryption I: Caesar Cipher",  // done
-    "Encryption II: Vigenère Cipher"  // done
-]
+/**
+ * 
+  Gained 20000 reputation for each of the following factions: Sector-12
+  Gained 2500 reputation for each of the following factions: Sector-12
+  Gained 7500 reputation for each of the following factions: Sector-12
+  Gained $750.000m
+  Gained 5000 reputation for each of the following factions: Sector-12
+  Gained 25000 faction reputation for Sector-12
+  Gained $525.000m
+  Gained $150.000m
+  Gained 20000 reputation for each of the following factions: Sector-12
+  Gained 5000 reputation for each of the following factions: Sector-12
+  Gained $150.000m
+  Gained 12500 reputation for each of the following factions: Sector-12
+  Gained $750.000m
+  Gained $150.000m
+  Gained 3750 reputation for each of the following factions: Sector-12
+  Gained 12500 reputation for each of the following factions: Sector-12
+  Gained 2500 faction reputation for Sector-12
+  Gained 7500 reputation for each of the following factions: Sector-12
+
+reward types
+
+examples:
+
+Gained $75.000m
+
+`Gained ${repGain} faction reputation for ${reward.name}`
+Gained 2500 faction reputation for Sector-12
+
+`Gained ${gainPerFaction} reputation for each of the following factions: ${factions.join(", ")}`;
+Gained 7500 reputation for each of the following factions: Sector-12, hello
+
+`Gained ${repGain} company reputation for ${reward.name}`
+
+`Gained ${numeralWrapper.formatMoney(moneyGain)}`
+Gained $750.000m
+
+
+
+ */
+
+import { deFormatGameNum } from "Helpers/Formatting";
+
+function getRewardData(reward) {
+    // all of the rewards starts with this
+    reward = reward.slice("Gained ".length)
+
+    /** 
+     * money reward
+     * 
+     * constructor => `Gained ${numeralWrapper.formatMoney(moneyGain)}`
+     * example => Gained $750.000m
+     * */
+    if (reward.startsWith("$")) {
+        let moneyReward = deFormatGameNum(reward.slice("$".length))
+
+        return {
+            "type": "money",
+            "amount": moneyReward
+        }
+    }
+
+    let search
+
+    /** 
+     * faction reputation reward
+     * 
+     * constructor => `Gained ${repGain} faction reputation for ${reward.name}`
+     * example => Gained 2500 faction reputation for Sector-12
+     * */
+    search = /[0-9]*(?= faction reputation for )/.exec(reward)
+    if (search != null && search.length == 1) {
+        let fRepGain = parseInt(search[0])
+
+        let rawFactionStart = (search[0] + " faction reputation for ").length
+        let faction = reward.slice(rawFactionStart)
+
+        return {
+            "type": "faction reputation",
+            "amount": fRepGain,
+            "factions": [faction]
+        }
+    }
+
+    /** 
+     * multiple faction reputation reward
+     * 
+     * constructor => `Gained ${gainPerFaction} reputation for each of the following factions: ${factions.join(", ")}`
+     * example => Gained 7500 reputation for each of the following factions: Sector-12, CyberSec
+     * */
+    search = /[0-9]*(?= reputation for each of the following factions: )/.exec(reward)
+    if (search != null && search.length == 1) {
+        let fRepGain = parseInt(search[0])
+
+        let rawFactionsStart = (search[0] + " reputation for each of the following factions: ").length
+        let factions = reward.slice(rawFactionsStart).split(", ")
+
+        return {
+            "type": "faction reputation",
+            "amount": fRepGain,
+            "factions": [factions]
+        }
+    }
+
+    /** 
+     * company reputation reward
+     * 
+     * constructor => `Gained ${repGain} company reputation for ${reward.name}`
+     * example => i haven't got one yet
+     * */
+    search = /[0-9]*(?= company reputation for )/.exec(reward)
+    if (search != null && search.length == 1) {
+        let cRepGain = parseInt(search[0])
+
+        let rawCompanyStart = (search[0] + " company reputation for ").length
+        let company = reward.slice(rawCompanyStart)
+
+        return {
+            "type": "company reputation",
+            "amount": cRepGain,
+            "company": company
+        }
+    }
+
+}
+
+
 
 /** @param {NS} ns */
 function solve(ns, fileName, host) {
@@ -89,49 +187,32 @@ function solve(ns, fileName, host) {
     const contractSolver = typeToFuncMap[contractType]
 
     if (contractSolver == undefined) {
-        ns.print(`no solver found for "${fileName}" on "${host}" with the type "${contractType}" \n`)
-        return "NO SOLVER FOUND"
+        // no solver found
+        throw new Error(`no solver found for type "${contractType}"`)
     }
 
-    // console.log(contractType, fileName, host)
 
     const answer = contractSolver(data)
 
-    // console.log(answer)
     const reward = ns.codingcontract.attempt(answer, fileName, host)
 
     if (reward == "") {
-        // console.log(contractType, fileName, host)
-        // console.log(data)
-
         // fail
-        ns.print(
+        throw new Error(
             `failed ${contractType}` + "\n" +
             `  from "${fileName}" on "${host}"` + "\n" +
             `  data: ${data}` + "\n" +
-            `  expected answer: ${answer}` + "\n"
+            `  attempted answer: ${answer}` + "\n"
         )
 
-        return "FAIL"
-
-    } else {
-        // succeed 
-        ns.print(
-            `completed ${contractType}` + "\n" +
-            `  from "${fileName}" on "${host}"` + "\n" +
-            `  ${reward}` + "\n"
-        )
-
-        return "SUCCESS"
     }
+
+    // succeed 
+    return reward
 }
 
-/** @param {NS} ns */
-export async function main(ns) {
-    ns.disableLog("ALL")
-    ns.tail()
-    ns.clearLog()
 
+function getContracts(ns) {
     const servers = getServers(ns)
 
     let contracts = []
@@ -144,54 +225,109 @@ export async function main(ns) {
         }
     }
 
+    return contracts
+}
+
+
+import { formatNum } from "Helpers/Formatting";
+
+
+/** @param {NS} ns */
+export function solveContracts(ns, logToTerminal = false) {
+    ns.disableLog("ALL")
+
+    let contracts = getContracts(ns)
+
     if (contracts.length == 0) {
         ns.print(
+            "\n" +
             `no contracts found \n` +
-            "\n"
-            )
+            "\n")
+
+        if (logToTerminal == true) {
+            ns.tprintf(
+                "\n" +
+                `no contracts found \n` +
+                "\n")
+        }
+
         return
     }
 
-    ns.print(`found ${contracts.length} contracts \n`)
-
-    ns.print(
-        "" + `\n` +
-        "---------------------" + `\n` +
-        "" + `\n`)
-
-    let success = 0
-    let fail = 0
-    let noSolver = 0
+    let rewards = {
+        "money": 0,
+        // faction name, tot rep gain
+        "faction reputation": {},
+        // company name, tot rep gain
+        "company reputation": {},
+    }
 
     for (let [contract, server] of contracts) {
-        let status = solve(ns, contract, server)
-        if (status == "FAIL") {
-            fail++
-        } else if (status == "SUCCESS") {
-            success++
-        } else if (status == "NO SOLVER FOUND") {
-            noSolver++
+        let contractReward = solve(ns, contract, server)
+
+        let rewardData = getRewardData(contractReward)
+
+        if (rewardData.type == "money") {
+            rewards.money += rewardData.amount
+        }
+
+        if (rewardData.type == "faction reputation") {
+            for (let faction of rewardData.factions) {
+                if (rewards["faction reputation"][faction] == undefined) {
+                    rewards["faction reputation"][faction] = 0
+                }
+
+                rewards["faction reputation"][faction] += rewardData.amount
+            }
+        }
+
+        if (rewardData.type == "company reputation") {
+            if (rewards["company reputation"][rewardData.company] == undefined) {
+                rewards["company reputation"][rewardData.company] = 0
+            }
+
+            rewards["company reputation"][rewardData.company] += rewardData.amount
         }
     }
 
-    ns.print(
-        "" + `\n` +
-        "---------------------" + `\n` +
-        "" + `\n`)
+    let resultList = [
+        `found and solved ${contracts.length} contracts`,
+        "",
+        "----rewards----",
+        `money: ${formatNum(rewards.money)}`,
+    ]
 
-    ns.print(
-        `found ${contracts.length} contracts`
-    )
+    resultList.push(
+        "",
+        "faction reputation gain:")
 
-    if (fail == 0 && noSolver == 0) {
-        ns.print(
-            "all contracts successfully solved \n \n"
-        )
-    } else (
-        ns.print(
-            `${success}/${contracts.length} solved` + "\n" +
-            `${fail}/${contracts.length} failed` + "\n" +
-            `${noSolver}/${contracts.length} no solver found`
-        )
-    )
+    for (let faction in rewards["faction reputation"]) {
+        resultList.push(`  ${faction}: ${rewards["faction reputation"][faction]}`)
+    }
+
+    resultList.push(
+        "",
+        "company reputation gain:")
+
+    for (let company in rewards["company reputation"]) {
+        resultList.push(`  ${company}: ${rewards["company reputation"][company]}`)
+    }
+
+    resultList.push("\n")
+
+    let resultStr = resultList.join("\n")
+
+    ns.print(resultStr)
+
+    if (logToTerminal == true) {
+        ns.tprintf(resultStr)
+    }
+}
+
+
+
+
+/** @param {NS} ns */
+export async function main(ns) {
+    solveContracts(ns, JSON.parse(ns.args[0]))
 }
