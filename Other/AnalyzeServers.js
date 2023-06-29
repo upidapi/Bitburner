@@ -3,11 +3,10 @@ import {
     getServers
 } from "Other/ScanServers.js"
 
-// import { getMaxHackThreads, getAvailableRamWGH } from "Hacking/Hack.js"
 import { getMaxHackThreads } from "HybridShotgunBatcher/CalcMaxBatchSize"
 import { formatNum } from "Helpers/Formatting"
 
-import { getRoot } from "Hacking/GetRoot.js"
+import { getRoot } from "HybridShotgunBatcher/SetupServer"
 
 import { getMinSecWeakenTime } from "Helpers/MyFormulas.js"
 import { getMaxAvailableRam } from "HybridShotgunBatcher/Helpers"

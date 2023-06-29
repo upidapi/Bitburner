@@ -1,8 +1,9 @@
+import { fixServer } from "HybridShotgunBatcher/SetupServer"
 
 /** @param {NS} ns */
 export async function main(ns) {
     const target = ns.args[0]
-    ns.run("HybridShotgunBatcher/Controller.js", 1, target)
+    await fixServer(ns, target)
 }
 
 

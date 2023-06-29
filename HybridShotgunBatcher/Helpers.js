@@ -12,9 +12,9 @@ import {
 } from "HybridShotgunBatcher/Settings"
 
 export const RamUsage = {
-    "hack": 1.70, // ns.getScriptRam("Hacking/ThreadScripts/ThreadHack.js")
-    "grow": 1.75, // ns.getScriptRam("Hacking/ThreadScripts/ThreadHack.js")
-    "weaken": 1.75 // ns.getScriptRam("Hacking/ThreadScripts/ThreadHack.js")
+    "hack": 1.70, // ns.getScriptRam("HybridShotgunBatcher/ThreadScripts/ThreadHack.js")
+    "grow": 1.75, // ns.getScriptRam("HybridShotgunBatcher/ThreadScripts/ThreadHack.js")
+    "weaken": 1.75 // ns.getScriptRam("HybridShotgunBatcher/ThreadScripts/ThreadHack.js")
 }
 
 
@@ -74,8 +74,9 @@ export function getAvailableWGHServers(ns) {
 
     const serverRam = availableServers.reduce(
         (partialSum, serverName) =>
-            partialSum + Math.max(0, ns.getServerMaxRam(serverName) - 2)
-    )
+            partialSum + Math.max(0, ns.getServerMaxRam(serverName) - 2),
+        0  // initial value
+    )  
 
     // check if the amount of ram on the servers is lees than the ram on home
     // if so add home as a possibility for WGH thread distribution 
