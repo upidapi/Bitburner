@@ -1,15 +1,16 @@
 // /** @param {NS} ns **/
 // export async function other(ns) {
 
+import { getNextLowSecEnd } from "HybridShotgunBatcher/SecHoles";
+
 // }
 
 
-console.log(typeof (() => 1))
+export async function main(ns) {
+    for (let i = 0; i < 10000; i++) {
 
 
-[11,13], [5,6], [5,6], [19,26], [7,16], [20,24]
-
-[5,6], [19,26], [7,16]
-
-
-[5,6], [7,16], [11,13], [19,26]
+        const toEnd = getNextLowSecEnd(Date.now() + (i / 10)) - (Date.now() + (i / 10))
+        console.log(toEnd)
+    }
+}

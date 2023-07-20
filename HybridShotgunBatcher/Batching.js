@@ -107,7 +107,7 @@ export function getBestFixBatch(ns, target, availableRam) {
  */
 export function getBestMoneyBatch(ns, target, availableRam) {
     function hackThreadsToRam(hackThreads) {
-        threads.hack = hackThreads
+        threads.hack = Math.floor(hackThreads)
 
         const moneyStolenP = ns.hackAnalyze(target) * threads.hack
         const neededMoneyIncD = 1 / (1 - moneyStolenP)
@@ -138,6 +138,42 @@ export function getBestMoneyBatch(ns, target, availableRam) {
     return threads
 }
 
+// /**
+//  * @param {NS} ns 
+//  * @param {String} target 
+//  * @returns {Threads}
+//  * 
+//  * Gets the batch that will get the most money (the optimal batch) for a given target.
+//  * Without considering the ram usage.
+//  * */ 
+
+// export function getOptimalMoneyBatch(ns, target) {
+//     const hackPart = ns.hackAnalyze(target)
+//     if (hackPart == 0) {
+//         return new Threads()
+//     }
+
+//     const hackForHalf = Math.floor(0.5 / hackPart)
+//     let threads = new Threads(hackForHalf, 0, 0)
+
+//     const moneyStolenP = ns.hackAnalyze(target) * threads.hack
+//     const neededMoneyIncD = 1 / (1 - moneyStolenP)
+
+//     threads.grow = ns.growthAnalyze(target, neededMoneyIncD)
+//     threads.grow = Math.ceil(threads.grow)
+
+//     let secInc = 0
+//     secInc += ns.hackAnalyzeSecurity(threads.hack)
+//     secInc += ns.growthAnalyzeSecurity(threads.grow)
+
+//     threads.weaken = secInc / ns.weakenAnalyze(1)
+//     threads.weaken = Math.ceil(threads.weaken)
+
+//     return threads
+// }
+
+
+
 /**
  * @param {NS} ns 
  * @param {String} target 
@@ -148,35 +184,14 @@ export function getBestMoneyBatch(ns, target, availableRam) {
  * */ 
 
 export function getOptimalMoneyBatch(ns, target) {
-    const hackPart = ns.hackAnalyze(target)
-    if (hackPart == 0) {
-        return new Threads()
-    }
-
-    const hackForHalf = Math.floor(0.5 / hackPart)
-    let threads = new Threads(hackForHalf, 0, 0)
-
-    const moneyStolenP = ns.hackAnalyze(target) * threads.hack
-    const neededMoneyIncD = 1 / (1 - moneyStolenP)
-
-    threads.grow = ns.growthAnalyze(target, neededMoneyIncD)
-    threads.grow = Math.ceil(threads.grow)
-
-    let secInc = 0
-    secInc += ns.hackAnalyzeSecurity(threads.hack)
-    secInc += ns.growthAnalyzeSecurity(threads.grow)
-
-    threads.weaken = secInc / ns.weakenAnalyze(1)
-    threads.weaken = Math.ceil(threads.weaken)
-
-    return threads
+    return getBestMoneyBatch(ns, target, Infinity)
 }
 
 
 import { RamUsage, Threads, distributeThreads } from "HybridShotgunBatcher/Helpers"
 
 
-import { WGHData } from "HybridShotgunBatcher/Dashboard/DataClasses"
+import { BatchData, WGHData } from "HybridShotgunBatcher/Dashboard/DataClasses"
 
 
 /** 

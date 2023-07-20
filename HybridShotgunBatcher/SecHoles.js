@@ -1,7 +1,7 @@
 import { execMargin, lowSecHoleTime, sleepMargin } from "HybridShotgunBatcher/Settings"
 
 export function getNextSecHole(time = null) {
-
+    time = time ?? Date.now()
 
     // gets the start time of the next sec hole
     // the nextHole is always larger than time

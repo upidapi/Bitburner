@@ -1,5 +1,5 @@
 /**
- * thease files are for "multithreading"
+ * these files are for "multithreading"
  */
 
 /** @param {NS} ns */

@@ -7,7 +7,7 @@ import { averageBatchASec, execMargin, maxShotgunShells, minDeltaBatchExec } fro
 import { getServers } from "Other/ScanServers"
 import { getBestFixBatch, getBestMoneyBatch, getOptimalFixBatch, getOptimalMoneyBatch, startBatch } from "HybridShotgunBatcher/Batching"
 import { getMoneyPerMs } from "HybridShotgunBatcher/Other"
-import { getLowSecHoleEnd, getNextLowSecEnd, getNextSecHole, goToNextSecHole, inLowSecHole } from "HybridShotgunBatcher/SecHoles"
+import { getLowSecHoleEnd, getLowSecHoleStart, getNextLowSecEnd, getNextSecHole, goToNextSecHole, inLowSecHole } from "HybridShotgunBatcher/SecHoles"
 import { getMinSecWeakenTime } from "Helpers/MyFormulas"
 
 
@@ -136,7 +136,8 @@ function getTargetsData(ns) {
             execTime: Date.now(),
             fixedStatus: 0,
             batch: getOptimalMoneyBatch(ns, target),
-            baseSecurity: 0, // will be set by somethingBatchFix()
+            baseSecurity: ns.getServerSecurityLevel(target),
+            baseMoney: ns.getServerMoneyAvailable(target),
         }
     }
 
@@ -149,6 +150,10 @@ function getTargetsData(ns) {
  * @param {String} target 
  */
 function ensureCanHack(ns, target) {
+    if (ns.getServerMaxMoney(target) == 0) {
+        return false
+    }
+
     if (!ns.hasRootAccess(target)) {
         // we need more programs
 
@@ -186,7 +191,7 @@ function getTargetPriority(ns, targetsData) {
     let aRam = getAvailableHsbRam(ns)
 
     for (const [target, _] of targetInfo) {
-        if (!ensureCanHack(ns, target)) {
+        if (ensureCanHack(ns, target)) {
             continue
         }
 
@@ -211,27 +216,87 @@ function getTargetPriority(ns, targetsData) {
 }
 
 
-function targetFixed(ns, target) {
-    if (ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target) != 0) {
+/**
+ * @param {NS} ns 
+ * @param {String} target 
+ * @param {Object} targetData 
+ * @returns 
+ */
+function targetFixValid(ns, target, targetData) {
+    if (ns.getServerSecurityLevel(target) > targetData.baseSecurity) {
         // probably due to that the last weaken, before the sec hole start
         // somehow didn't exec before the sec hole
 
-        ns.print("security not min")
-        ns.print("  min sec: " + ns.getServerMinSecurityLevel(target))
-        ns.print("  cur sec: " + ns.getServerSecurityLevel(target))
+        const errorMsg =
+            `security larger than the baseSecurity` + "\n" +
+            `    targetData.baseSecurity: ${targetData.baseSecurity}` + "\n" +
+            `    current security: ${ns.getServerSecurityLevel(target)}` + "\n" +
+            `    min security: ${ns.getServerSecurityLevel(target)}` + "\n" +
+            `    initial security: ${ns.getServer(target).baseDifficulty}`
+
+        throw new Error(errorMsg)
+    }
+
+    if (ns.getServerSecurityLevel(target) < targetData.baseSecurity) {
+        // the targetData.baseSecurity measurement was incorrect 
+        // or the targetData.baseSecurity didn't properly update
+
+        // the ns.getServerSecurityLevel() is too low
+
+        const errorMsg =
+            `targetData.baseSecurity measurement was incorrect` + "\n" +
+            `    targetData.baseSecurity: ${targetData.baseSecurity}` + "\n" +
+            `    current security: ${ns.getServerSecurityLevel(target)}` + "\n" +
+            `    min security: ${ns.getServerSecurityLevel(target)}` + "\n" +
+            `    initial security: ${ns.getServer(target).baseDifficulty}`
+
+        throw new Error(errorMsg)
+    }
+
+    if (ns.getServerMoneyAvailable(target) > targetData.baseMoney) {
+        // probably due to that the last grow, before the sec hole start
+        // somehow didn't exec before the sec hole
+
+        // can also be because the targetData.baseMoney measurement was incorrect 
+        // or the targetData.baseMoney didn't properly update
+
+        const errorMsg =
+            `money less than the baseMoney` + "\n" +
+            `    targetData.baseMoney: ${targetData.baseMoney}` + "\n" +
+            `    current money: ${ns.getServerMoneyAvailable(target)}` + "\n" +
+            `    max money: ${ns.getServerMaxMoney(target)}`
+
+        throw new Error(errorMsg)
+    }
+
+    if (ns.getServerMoneyAvailable(target) < targetData.baseMoney) {
+        // the ns.getServerMaxMoney() is too low
+
+        // the targetData.baseMoney measurement was incorrect 
+        // or the targetData.baseMoney didn't properly update
+
+        const errorMsg =
+            `money less than the baseMoney` + "\n" +
+            `    targetData.baseMoney: ${targetData.baseMoney}` + "\n" +
+            `    current money: ${ns.getServerMoneyAvailable(target)}` + "\n" +
+            `    max money: ${ns.getServerMaxMoney(target)}`
+
+        throw new Error(errorMsg)
+    }
+
+    return true
+}
+
+
+function targetFixed(ns, target) {
+    if (ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target) != 0) {
+        // server security not min
 
         return false
     }
 
     if (ns.getServerMaxMoney(target) - ns.getServerMoneyAvailable(target) != 0) {
         // server money not max
-
-        const serverMoney = formatNum(ns.getServerMoneyAvailable(target), 3)
-        const serverMaxMoney = formatNum(ns.getServerMaxMoney(target), 3)
-        const moneyP = (ns.getServerMoneyAvailable(target) / ns.getServerMaxMoney(target)) * 100
-
-        ns.print("money not max")
-        ns.print(`    money: ${serverMoney}/${serverMaxMoney} ${moneyP}%`)
 
         return false
     }
@@ -255,27 +320,15 @@ function ensureValidExecTime(ns, target, targetData) {
         return false
     }
 
-    // if (ns.getServerSecurityLevel(target) > targetData.baseSecurity) {
-    //     // something went wrong and the security is optimal when in the low sec hole
-
-    //     throw new Error(
-    //         "security not min in lowSecHole" + "\n" +
-    //         `  sec: ${ns.getServerSecurityLevel(target)}` + "\n" +
-    //         `  min sec: ${ns.getServerMinSecurityLevel(target)}` + "\n" +
-    //         `  base sec: ${targetData.baseSecurity}`
-    //     )
-    //     // return false
-    // }
 
     while (true) {
         // the exec time for a batch that would be launched now (or to be exact after the sleep hole ends)
         // the thing is that we can't launch a batch before this one
-        const firstPossibleExecTime = getNextLowSecEnd() + minDeltaBatchExec + ns.getWeakenTime(targetData.target)
+        const firstPossibleExecTime = getNextLowSecEnd() + minDeltaBatchExec + ns.getWeakenTime(target)
 
         if (targetData.execTime < firstPossibleExecTime) {
             // we can't launch a batch ion the past
             targetData.execTime = firstPossibleExecTime
-            console.log(targetData, "exec in past")
             continue
         }
 
@@ -287,7 +340,6 @@ function ensureValidExecTime(ns, target, targetData) {
             // since that would remove the lowSecHole
 
             targetData.execTime = getNextLowSecEnd(targetData.execTime) + minDeltaBatchExec
-            console.log(targetData, "exec in low sec")
             continue
         }
 
@@ -305,14 +357,15 @@ function ensureValidExecTime(ns, target, targetData) {
             // i.e skip this shotgun and just go the next (whiteout increasing the 
             // execTime) 
 
-            console.log(getLowSecHoleEnd(), firstStartTime, deltaFirstStartTime, 2)
-
             return false
         }
 
         return true
     }
 }
+
+
+const speedStart = true
 
 
 function ensureFixed(ns, target, targetData) {
@@ -324,22 +377,18 @@ function ensureFixed(ns, target, targetData) {
     // - fixing
     // - fixed
 
-    // console.log(1)
 
     if (targetData.fixedStatus == "fixed") {
         return true
     }
 
-    // console.log(2)
-
-    if (targetFixed(ns, target)) {
+    if (targetFixed(ns, target, targetData)) {
         targetData.baseSecurity = ns.getServerSecurityLevel(target)
+        targetData.baseMoney = ns.getServerMoneyAvailable(target)
 
         targetData.fixedStatus = "fixed"
         return true
     }
-
-    // console.log(3)
 
     if (targetData.fixedStatus == "fixing") {
         if (speedStart) {
@@ -348,7 +397,6 @@ function ensureFixed(ns, target, targetData) {
         return false
     }
 
-    // console.log(4)
     // if data.fixedStatus is not "fixing" or "fixed"
     // then data.fixedStatus must be a number
     if (targetData.fixedStatus > Date.now()) {
@@ -360,12 +408,10 @@ function ensureFixed(ns, target, targetData) {
     const fixBatch = getBestFixBatch(ns, target, getAvailableHsbRam(ns))
     const optimalFixBatch = getOptimalFixBatch(ns, target)
 
-    // console.log(5, fixBatch, optimalFixBatch)
-
     if (fixBatch.equal(optimalFixBatch)) {
         // the target will be finished when the batch completes
 
-        targetData.fixedStatus == "fixing"
+        targetData.fixedStatus = "fixing"
     } else {
         // we will need (at least) another batch to fully fix it
 
@@ -380,13 +426,10 @@ function ensureFixed(ns, target, targetData) {
     targetData.execTime += minDeltaBatchExec
 
     targetData.baseSecurity = ns.getServerSecurityLevel(target)
+    targetData.baseMoney = ns.getServerMoneyAvailable(target)
 
-    if (targetData.fixedStatus == "fixing") {
-        if (speedStart) {
-            return true
-        }
-        return false
-    }
+    // we return false to ensure that the execTime will be 
+    // revalidated since it changed after starting the fix batch 
     return false
 }
 
@@ -404,6 +447,36 @@ function getMaxBatchesForTime(firstBatchExec) {
 }
 
 
+function getSubShotgunAvailableRam(ns,
+    targetData,
+    subShotgunBatchExecTimes,
+    subShotgunMaxRam,
+    subBatchData,
+) {
+    let subShotgunUsedRam = 0
+
+    for (let i = 0; i < subShotgunBatchExecTimes.length; i++) {
+        const batchExecTime = subShotgunBatchExecTimes[i]
+
+        if (batchExecTime >= Date.now()) {
+            const notCompleteBatches = (subShotgunBatchExecTimes.length - i)
+            subShotgunUsedRam += targetData.batch.ramUsage() * notCompleteBatches
+        }
+    }
+
+    if (subBatchData[0] != null) {
+        if (subBatchData[1] >= Date.now()) {
+            subShotgunUsedRam += subBatchData[0].ramUsage()
+        }
+    }
+
+    const subShotgunAvailableRam = subShotgunMaxRam - subShotgunUsedRam
+    const availableRam = Math.max(0, Math.min(getAvailableHsbRam(ns), subShotgunAvailableRam))
+
+    return availableRam
+}
+
+
 /**
  * @param {NS} ns 
  */
@@ -416,28 +489,15 @@ function scheduleSubShotgun(ns,
 ) {
     // sub shotgun
 
-    let subBatchTotalUsedRam = 0
-
-    for (let i = 0; i < subShotgunBatchExecTimes.length; i++) {
-        const batchExecTime = subShotgunBatchExecTimes[i]
-
-        if (batchExecTime >= Date.now()) {
-            const notCompleteBatches = (subShotgunBatchExecTimes.length - i)
-            subBatchTotalUsedRam += targetData.batch.ramUsage() * notCompleteBatches
-        }
-    }
-
-    if (subBatchData[0] != null) {
-        if (subBatchData[1] >= Date.now()) {
-            subBatchTotalUsedRam += subBatchData[0].ramUsage()
-        }
-    }
-
-    const subBatchAvailableRam = subShotgunMaxRam - subBatchTotalUsedRam
-    const availableRam = Math.max(0, Math.min(getAvailableHsbRam(ns), subBatchAvailableRam))
+    const availableRam = getSubShotgunAvailableRam(ns,
+        targetData,
+        subShotgunBatchExecTimes,
+        subShotgunMaxRam,
+        subBatchData
+    )
 
     const maxBatchesForRam = Math.floor(availableRam / targetData.batch.ramUsage())
-    const maxBatchesForTime = getMaxBatchesForTime(data.execTime)
+    const maxBatchesForTime = getMaxBatchesForTime(targetData.execTime)
     const maxBatches = Math.min(maxBatchesForRam, maxBatchesForTime)
 
     for (let i = 0; i < maxBatches; i++) {
@@ -448,19 +508,25 @@ function scheduleSubShotgun(ns,
         targetData.execTime += minDeltaBatchExec
     }
 
-    if (maxBatchesForRam < maxBatchesForTime) {
-        const subBatchRam = availableRam % targetData.batch.ramUsage()
 
-        const subBatch = getBestMoneyBatch(ns, target, subBatchRam)
+    // we have to have space in the shotgun for the subBatch
+    if (1 <= getMaxBatchesForTime(targetData.execTime)) {
 
-        subBatchData = [subBatch, targetData.execTime]
+        // we have to wait for the last sub batch to complete
+        if (subBatchData[1] < Date.now()) {
+            const subBatchRam = availableRam % targetData.batch.ramUsage()
 
-        startBatch(ns, target, subBatch, targetData.execTime)
+            const subBatch = getBestMoneyBatch(ns, target, subBatchRam)
 
-        targetData.execTime += minDeltaBatchExec
+            subBatchData = [subBatch, targetData.execTime]
+
+            startBatch(ns, target, subBatch, targetData.execTime)
+
+            targetData.execTime += minDeltaBatchExec
+        }
     }
 
-    return subBatchData
+    return [subBatchData, subShotgunBatchExecTimes]
 }
 
 
@@ -471,7 +537,7 @@ function scheduleFullShotgun(ns, target, targetData) {
     // full shotgun
     const maxBatchesForTime = getMaxBatchesForTime(targetData.execTime)
 
-    const maxBatchesForRam = Math.floor(getAvailableHsbRam() / targetData.batch.ramUsage())
+    const maxBatchesForRam = Math.floor(getAvailableHsbRam(ns) / targetData.batch.ramUsage())
     const maxBatches = Math.min(maxBatchesForTime, maxBatchesForRam)
 
     for (let i = 0; i < maxBatches; i++) {
@@ -497,8 +563,10 @@ export async function multiServerHSb(ns) {
     let subBatchData = [null, 0]
 
     while (true) {
-        let targetPriority, newSubShotgunTarget
+        let targetPriority, newSubShotgunTarget;
         [targetPriority, [newSubShotgunTarget, subShotgunMaxRam]] = getTargetPriority(ns, targetsData)
+
+        // console.log(JSON.stringify([targetPriority, [newSubShotgunTarget, subShotgunMaxRam]]))
 
         if (newSubShotgunTarget != subShotgunTarget) {
             subShotgunTarget = newSubShotgunTarget
@@ -511,23 +579,39 @@ export async function multiServerHSb(ns) {
         for (const target of targetPriority) {
             let targetData = targetsData[target]
 
-            if (!ensureValidExecTime(ns, targetData)) {
+            if (!ensureValidExecTime(ns, target, targetData)) {
                 continue
             }
 
-            if (!ensureFixed(ns, targetData)) {
+            if (!ensureFixed(ns, target, targetData)) {
                 continue
             }
+
+            // error protection
+            targetFixValid(ns, target, targetData)
+
+            // console.log([getLowSecHoleStart(), getLowSecHoleEnd()])
 
             if (subShotgunTarget == target) {
-                subBatchData = scheduleSubShotgun(ns,
+                // console.log(targetData,
+                //     subShotgunBatchExecTimes,
+                //     subShotgunMaxRam,
+                //     subBatchData
+                // )
+
+                // console.log(subBatchData, subShotgunBatchExecTimes);
+
+                [subBatchData, subShotgunBatchExecTimes] = scheduleSubShotgun(ns,
+                    target,
                     targetData,
                     subShotgunBatchExecTimes,
                     subShotgunMaxRam,
                     subBatchData
                 )
+
             } else {
                 scheduleFullShotgun(ns,
+                    target,
                     targetData
                 )
             }
@@ -535,69 +619,12 @@ export async function multiServerHSb(ns) {
     }
 }
 
+
 /**
  * @param {NS} ns 
  */
 export async function main(ns) {
     ns.disableLog("ALL")
-    const targetsData = getTargetsData(ns)
 
-    while (true) {
-        await goToNextSecHole(ns)
-
-        const target = "omega-net"
-        const targetData = targetsData[target]
-
-        console.log(targetData)
-        if (!ensureValidExecTime(ns, target, targetData)) {
-            targetsData[target] = targetData
-            continue
-        }
-
-        if (!ensureFixed(ns, target, targetData)) {
-            targetsData[target] = targetData
-            continue
-        }
-
-        if (subShotgunTarget == target) {
-            console.log(targetData,
-                subShotgunBatchExecTimes,
-                subShotgunMaxRam,
-                subBatchData
-            )
-            return
-            subBatchData = scheduleSubShotgun(ns,
-                target,
-                targetData,
-                subShotgunBatchExecTimes,
-                subShotgunMaxRam,
-                subBatchData
-            )
-        } else {
-            console.log(targetData)
-            return
-            scheduleFullShotgun(ns,
-                target,
-                targetData
-            )
-        }
-
-        targetsData[target] = targetData
-    }
+    await multiServerHSb(ns)
 }
-
-
-// function test(dict) {
-//     dict.a += 1
-//     dict.b = "hello"
-// }
-
-
-// export async function main(ns) {
-//     const dict = {
-//         a: 100,
-//         b: 20
-//     }
-//     test(dict)
-//     console.log(dict)
-// }
