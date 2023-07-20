@@ -1,11 +1,10 @@
-export function decompressLZ(data) {
+ function decompressLZ(data) {
     let uncompressed = ""
 
     let type = 0
 
     let i = 0
     while (i < data.length) {
-        // RKSyqSyqSycqSycqSycqSycqSySJycqSySJycpjA1B1CFhc6M61CFhc6M6ufF6QC8C8C8C8
         let chunkSize = parseInt(data[i])
         let nChar = data[i + 1]
 
@@ -102,7 +101,7 @@ function getT1Options(aft) {
     return options
 }
 
-export function compressLZ(uncompressed) {
+ function compressLZ(uncompressed) {
     // let bestOptions = [
     //     //["cL", "cV"]
     //     [0, ""]
@@ -216,7 +215,12 @@ export function compressLZ(uncompressed) {
 
 }
 
+// console.log(decompressLZ(compressLZ("SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34")) == "SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34")
+// // SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34
+// // SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmm5TqR73CP4189nqpC32783
 
+// console.log(decompressLZ(compressLZ("SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34")))
+// console.log(compressLZ("SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34"))
 
 // console.log(compressLZ("ababac"))
 

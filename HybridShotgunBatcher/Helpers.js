@@ -38,6 +38,21 @@ export class Threads {
 
         return req_ram
     }
+
+    add(threads) {
+        this.hack += threads.hack;
+        this.grow += threads.grow;
+        this.weaken += threads.weaken;
+
+        return this
+    }
+
+    equal(batch) {
+        return this.hack == batch.hack &&
+            this.grow == batch.grow &&
+            this.weaken == batch.weaken
+    }
+
 }
 
 
@@ -76,7 +91,7 @@ export function getAvailableWGHServers(ns) {
         (partialSum, serverName) =>
             partialSum + Math.max(0, ns.getServerMaxRam(serverName) - 2),
         0  // initial value
-    )  
+    )
 
     // check if the amount of ram on the servers is lees than the ram on home
     // if so add home as a possibility for WGH thread distribution 

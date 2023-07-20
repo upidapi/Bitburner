@@ -3,8 +3,7 @@ function getMerged(merge, intervals) {
 
     let notAbsorbed = []
     for (let interval of intervals) {
-        if ((merge[0] <= interval[0] && interval[0] <= merge[1]) ||
-            (merge[0] <= interval[1] && interval[1] <= merge[1])) {
+        if ( ! (interval[0] > merge[1] || interval[1] < merge[0])) {
 
             merge = [
                 Math.min(merge[0], interval[0]),
@@ -44,50 +43,180 @@ export function mergeIntervals(data) {
 }
 
 // function mergeIntervals(data) {
-//     const nCells = Math.max(...data.map(val => val[1]))
+//     let map = []
 
-//     console.log(nCells, data)
-//     let covered = new Array(nCells).fill(0)
+//     for (let thing of data) {
+//         let diff = thing[1] - map.length
 
-//     for (let interval of data) {
-//         for (let i = interval[0]; i <= interval[1]; i++) {
-//             covered[i] = 1
+//         if (diff > 0) {
+//             map = map.concat(new Array(diff).fill(0))
+//         }
+
+//         for (let i = thing[0]; i <= thing[1]; i++) {
+//             map[i] = 1
 //         }
 //     }
 
-//     let intervals = []
+//     map.push(0)
 
-//     let i = 0
-//     let j
-//     while (i < covered.length) {
-
-//         if (covered[i] == 1) {
-//             for (j = i; j < covered.length; j++) {
-//                 if (covered[j] == 0) {
-//                     break
-//                 }
+//     let out = []
+//     let start = null
+//     for (let i = 0; i < map.length; i++) {
+//         if (start == null) {
+//             if (map[i] == 1) {
+//                 start = i
 //             }
-
-//             intervals.push([i, j - 1])
-//             i = j
-//             continue
 //         }
 
-//         i++
+//         if (map[i] == 0) {
+//             if (start != null) {
+//                 out.push([start, i - 1])
+//                 start = null
+//             }
+//         }
 //     }
 
-//     return intervals
+//     return out
 // }
 
-// console.log(mergeIntervals([
-//     [19, 24],
-//     [25, 34],
-//     [3, 7],
-//     [3, 7]
-// ]))
-
-
 // console.log(mergeIntervals(
-//     [[19, 24], [25, 34], [3, 7], [3, 7]]
+//     [
+//         [
+//             9,
+//             18
+//         ],
+//         [
+//             15,
+//             16
+//         ],
+//         [
+//             9,
+//             19
+//         ],
+//         [
+//             22,
+//             24
+//         ],
+//         [
+//             22,
+//             29
+//         ],
+//         [
+//             17,
+//             22
+//         ],
+//         [
+//             2,
+//             4
+//         ],
+//         [
+//             16,
+//             19
+//         ],
+//         [
+//             25,
+//             28
+//         ],
+//         [
+//             17,
+//             22
+//         ],
+//         [
+//             9,
+//             11
+//         ],
+//         [
+//             14,
+//             15
+//         ],
+//         [
+//             10,
+//             17
+//         ],
+//         [
+//             19,
+//             20
+//         ],
+//         [
+//             8,
+//             12
+//         ],
+//         [
+//             18,
+//             28
+//         ],
+//         [
+//             23,
+//             25
+//         ],
+//         [
+//             5,
+//             12
+//         ]
+//     ]
 // ))
+
+// [
+//     [
+//         9,
+//         18
+//     ],
+//     [
+//         9,
+//         29
+//     ],
+//     [
+//         2,
+//         4
+//     ],
+//     [
+//         17,
+//         28
+//     ],
+//     [
+//         23,
+//         25
+//     ],
+//     [
+//         5,
+//         17
+//     ]
+// ]
+
+// console.log(mergeIntervals([[11,13], [5,6], [5,6], [19,26], [7,16], [20,24]]))
+// console.log()
+
+// // Merge Overlapping Intervals
+// // data 
+// [
+//     [12, 18], 
+//     [8, 14], 
+//     [15, 17], 
+//     [1, 8], 
+//     [13, 18], 
+//     [3, 8], 
+//     [3, 7], 
+//     [19, 28], 
+//     [4, 7], 
+//     [2, 8]
+// ]
+
+[
+    [
+        22,
+        27
+    ],
+    [
+        2,
+        17
+    ]
+]
+
+// // my solution
+// [
+//     [1, 8],
+//     [8, 18],
+//     [19, 28]
+// ]
+
 

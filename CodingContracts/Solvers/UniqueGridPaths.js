@@ -13,7 +13,8 @@ export function getSimpleUniquePaths(data) {
     
     // math
     // *meth
-    return factorial(rowStep + colStep) * (1 / factorial(rowStep)) * (1 / factorial(colStep))
+    // the round is to avoid float inaccuracies
+    return Math.round(factorial(rowStep + colStep) * (1 / factorial(rowStep)) * (1 / factorial(colStep)))
 } 
 
 export function getUniquePaths(data) {

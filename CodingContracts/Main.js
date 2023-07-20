@@ -19,7 +19,7 @@ import { compressRLE } from "CodingContracts/Solvers/CompressionRLE";
 import { compressLZ, decompressLZ } from "CodingContracts/Solvers/CompressionLZ";
 import { ceasarCipher, vCipher } from "CodingContracts/Solvers/Cipher";
 
-const typeToFuncMap = {
+export const typeToFuncMap = {
     "Minimum Path Sum in a Triangle": trianglePathSum,
     "Spiralize Matrix": spiralizeMatrix,
     "HammingCodes: Integer to Encoded Binary": toHam,
@@ -48,49 +48,6 @@ const typeToFuncMap = {
     "Encryption I: Caesar Cipher": ceasarCipher,
     "Encryption II: Vigenère Cipher": vCipher,
 }
-
-
-/**
- * 
-  Gained 20000 reputation for each of the following factions: Sector-12
-  Gained 2500 reputation for each of the following factions: Sector-12
-  Gained 7500 reputation for each of the following factions: Sector-12
-  Gained $750.000m
-  Gained 5000 reputation for each of the following factions: Sector-12
-  Gained 25000 faction reputation for Sector-12
-  Gained $525.000m
-  Gained $150.000m
-  Gained 20000 reputation for each of the following factions: Sector-12
-  Gained 5000 reputation for each of the following factions: Sector-12
-  Gained $150.000m
-  Gained 12500 reputation for each of the following factions: Sector-12
-  Gained $750.000m
-  Gained $150.000m
-  Gained 3750 reputation for each of the following factions: Sector-12
-  Gained 12500 reputation for each of the following factions: Sector-12
-  Gained 2500 faction reputation for Sector-12
-  Gained 7500 reputation for each of the following factions: Sector-12
-
-reward types
-
-examples:
-
-Gained $75.000m
-
-`Gained ${repGain} faction reputation for ${reward.name}`
-Gained 2500 faction reputation for Sector-12
-
-`Gained ${gainPerFaction} reputation for each of the following factions: ${factions.join(", ")}`;
-Gained 7500 reputation for each of the following factions: Sector-12, hello
-
-`Gained ${repGain} company reputation for ${reward.name}`
-
-`Gained ${numeralWrapper.formatMoney(moneyGain)}`
-Gained $750.000m
-
-
-
- */
 
 import { deFormatGameNum } from "Helpers/Formatting";
 
@@ -180,7 +137,7 @@ function getRewardData(reward) {
 
 
 /** @param {NS} ns */
-function solve(ns, fileName, host) {
+export function solve(ns, fileName, host) {
     const data = ns.codingcontract.getData(fileName, host)
 
     const contractType = ns.codingcontract.getContractType(fileName, host)
@@ -191,8 +148,9 @@ function solve(ns, fileName, host) {
         throw new Error(`no solver found for type "${contractType}"`)
     }
 
-
     const answer = contractSolver(data)
+
+    console.log(answer, data)
 
     const reward = ns.codingcontract.attempt(answer, fileName, host)
 
@@ -212,7 +170,7 @@ function solve(ns, fileName, host) {
 }
 
 
-function getContracts(ns) {
+export function getContracts(ns) {
     const servers = getServers(ns)
 
     let contracts = []

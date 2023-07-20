@@ -1,5 +1,4 @@
 
-
 /**
  * @param {number} number 
  * @returns {string} 
@@ -78,9 +77,8 @@ function replace(a, i, x) {
 
 // works
 export function toHam(number) {
-    let binary = intToBinary(number)
-
-    binary = "-" + binary
+    // let binary = intToBinary(number)
+    let binary = "-" + number.toString(2)
 
     // console.log(binary)
 
@@ -89,7 +87,7 @@ export function toHam(number) {
     while (true) {
         const pos = 2 ** i
 
-        if (pos > binary.length) {
+        if (pos >= binary.length) {
             break
         }
 
@@ -130,6 +128,15 @@ export function toHam(number) {
     return binary
 }
 
+// console.log(HammingEncode(140633939966112480))
+// console.log(toHam(140633939966112480))
+
+// console.log(HammingEncode(9007199254740999))
+// console.log(toHam(9007199254740999))
+
+// 0001011101001110110000111010010101000011000010110011001011100000
+// ^^ ^   ^       ^               ^                               ^
+// 12 4   8       16              32                              64
 
 // works
 export function hamToInt(binary) {

@@ -1,14 +1,23 @@
 function convert(number, parts = []) {
-    if (number.startsWith("0") && number != "0") {
+    if (number == "") {
         return []
     }
 
-    if (number.length < 4) {
-        if (parseInt(number) > 255) {
-            return []
+    if (number == "0") {
+        return ["0"]
+    }
+
+    if (number.startsWith("0")) {
+        for (let part of convert(number.slice(1))) {
+            parts.push([number.slice(0, 1), ...part])
         }
-        
-        return [[number]]
+        return parts.filter((val) => val.length < 5)
+    }
+
+    if (number.length < 4) {
+        if (parseInt(number) <= 255) {
+            parts.push([number])
+        }
     }
 
     switch (number.length) {
@@ -39,7 +48,27 @@ function convert(number, parts = []) {
 
 
 export function genIp(number) {
-    return convert(number).map(val => val.join("."))
+    return convert(number)
+        .filter((val) => val.length == 4)
+        .map(val => val.join("."))
 }
 
-// console.log(genIp("1938718066"))
+// console.log(genIp("101124248"))
+// console.log()
+// 101124248
+// 10 1
+
+// 101.124.2.48,
+// 101.12.42.48,
+// 101.12.4.248,
+// 101.1.242.48,
+// 101.1.24.248,
+// 10.112.42.48,
+// 10.112.4.248,
+// 10.11.242.48,
+// 10.11.24.248,
+// 10.1.124.248
+
+// 23376093
+// 2 3 3 7 6 0 9 3
+// 233 76 0 93

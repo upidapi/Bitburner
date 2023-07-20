@@ -3,12 +3,12 @@
  * 
  * batch start := time when batch starts (the file is run) 
  * batch launch := time when WGH thread start (the exec time is set now)
- * WGH start := time when the acctual WGH starts (will finish in ns.getWGHTime())
+ * WGH start := time when the actual WGH starts (will finish in ns.getWeakenTime())
  * WGH exec := time when the effect of WGH takes affect
  * 
  * batch := a group of WHG that will leave the server optimal after 
  *          execution + hacks the server 
- * shotgun := a group of sequential batches, folowed by a low sec hole
+ * shotgun := a group of sequential batches, followed by a low sec hole
  * shotgun shell := a batch in a shotgun
  * 
  * low sec hole := a time with low security, WGH launches here
@@ -79,3 +79,10 @@ export const minDeltaBatchExec = WGHMargin * 3
  * it needs a low sec hole for them to launch the WGH
  */
 export const maxShotgunShells = Math.floor((execMargin - lowSecHoleTime) / minDeltaBatchExec)
+
+/**
+ * the average amount of time it will take for each batch in a full shotgun
+ * i.e the average aSec for the weaken in full shotgun
+ * this takes the "worst" case scenario when the entire sleepMargin has to be awaited
+ */
+export const averageBatchASec = sleepMargin + minDeltaBatchExec * (maxShotgunShells - 1) / 2
