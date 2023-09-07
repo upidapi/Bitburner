@@ -15,15 +15,19 @@
         "brutessh",
         "ceasar",
         "codingcontract",
+        "endregion",
         "ftpcrack",
         "httpworm",
         "killall",
         "mults",
         "octo",
         "padd",
+        "Prio",
         "spiralize",
         "sqlinject",
         "tprintf",
-        "Vigenère"
+        "vals",
+        "Vigenère",
+        "n00dles"
     ],
 }

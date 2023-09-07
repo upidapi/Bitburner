@@ -57,9 +57,10 @@ export class LogEntry {
      * @param {number} startTime 
      * @param {WGHData | BatchData | ShotgunData} data 
      */
-    constructor(startTime, data, dataClass = null) {
+    constructor(startTime, data, target, dataClass = null) {
         this.startTime = startTime
         this.data = data
+        this.target = target
         this.dataClass = dataClass // only for signifying
     }
 
@@ -122,7 +123,7 @@ function convertToObject(objData, objClass) {
 }
 
 export function strToLog(strData) {
-    console.log(strData)
+    // console.log(strData)
     const data = JSON.parse(strData)
     return convertToObject(data, "LogEntry")
 }

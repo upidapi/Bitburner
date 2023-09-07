@@ -86,3 +86,17 @@ export const maxShotgunShells = Math.floor((execMargin - lowSecHoleTime) / minDe
  * this takes the "worst" case scenario when the entire sleepMargin has to be awaited
  */
 export const averageBatchASec = sleepMargin + minDeltaBatchExec * (maxShotgunShells - 1) / 2
+
+
+/**
+ * the extra time we give ourself to actually start the batch
+ * i.e the max time between then the execTime is calculated and 
+ * when the batch starts
+ */
+export const StartMargin = 8
+
+
+/**
+ * additional reserved ram on home
+ */
+export const hostRamMargin = 100

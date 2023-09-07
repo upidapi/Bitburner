@@ -57,6 +57,7 @@ function getBestMoneyFixBatch(ns, target, availableRam) {
     return new Threads()
 }
 
+
 function getBestSecurityFixBatch(ns, target, availableRam) {
     if (availableRam == 0) {
         return new Threads()
@@ -79,14 +80,6 @@ function getBestSecurityFixBatch(ns, target, availableRam) {
     return new Threads()
 }
 
-export function getOptimalFixBatch(ns, target) {
-    const securityFixBatch = getBestSecurityFixBatch(ns, target, Infinity)
-
-    const moneyFixBatch = getBestMoneyFixBatch(ns, target, Infinity)
-
-    return securityFixBatch.add(moneyFixBatch)
-}
-
 
 /**
  * gets the batch that will get the target the closest to fixed (with the available ram)
@@ -102,22 +95,30 @@ export function getBestFixBatch(ns, target, availableRam) {
     return bestFixBatch
 }
 
+
+export function getOptimalFixBatch(ns, target) {
+    return getBestFixBatch(ns, target, Infinity)
+}
+
+
 /**
  * gets the optimal batch for a given target and ram
+ * @param {NS} ns
  */
 export function getBestMoneyBatch(ns, target, availableRam) {
     function hackThreadsToRam(hackThreads) {
+        // exec order: ghw
         threads.hack = Math.floor(hackThreads)
 
-        const moneyStolenP = ns.hackAnalyze(target) * threads.hack
-        const neededMoneyIncD = 1 / (1 - moneyStolenP)
+        const moneyStolenD = ns.hackAnalyze(target) * threads.hack
+        const neededMoneyIncD = 1 / (1 - moneyStolenD)
 
         threads.grow = ns.growthAnalyze(target, neededMoneyIncD)
         threads.grow = Math.ceil(threads.grow)
 
-        let secInc = 0
-        secInc += ns.hackAnalyzeSecurity(threads.hack)
-        secInc += ns.growthAnalyzeSecurity(threads.grow)
+        const secInc =
+            ns.hackAnalyzeSecurity(threads.hack) +
+            ns.growthAnalyzeSecurity(threads.grow)
 
         threads.weaken = secInc / ns.weakenAnalyze(1)
         threads.weaken = Math.ceil(threads.weaken)
@@ -138,42 +139,6 @@ export function getBestMoneyBatch(ns, target, availableRam) {
     return threads
 }
 
-// /**
-//  * @param {NS} ns 
-//  * @param {String} target 
-//  * @returns {Threads}
-//  * 
-//  * Gets the batch that will get the most money (the optimal batch) for a given target.
-//  * Without considering the ram usage.
-//  * */ 
-
-// export function getOptimalMoneyBatch(ns, target) {
-//     const hackPart = ns.hackAnalyze(target)
-//     if (hackPart == 0) {
-//         return new Threads()
-//     }
-
-//     const hackForHalf = Math.floor(0.5 / hackPart)
-//     let threads = new Threads(hackForHalf, 0, 0)
-
-//     const moneyStolenP = ns.hackAnalyze(target) * threads.hack
-//     const neededMoneyIncD = 1 / (1 - moneyStolenP)
-
-//     threads.grow = ns.growthAnalyze(target, neededMoneyIncD)
-//     threads.grow = Math.ceil(threads.grow)
-
-//     let secInc = 0
-//     secInc += ns.hackAnalyzeSecurity(threads.hack)
-//     secInc += ns.growthAnalyzeSecurity(threads.grow)
-
-//     threads.weaken = secInc / ns.weakenAnalyze(1)
-//     threads.weaken = Math.ceil(threads.weaken)
-
-//     return threads
-// }
-
-
-
 /**
  * @param {NS} ns 
  * @param {String} target 
@@ -181,7 +146,7 @@ export function getBestMoneyBatch(ns, target, availableRam) {
  * 
  * Gets the batch that will get the most money (the optimal batch) for a given target.
  * Without considering the ram usage.
- * */ 
+ * */
 
 export function getOptimalMoneyBatch(ns, target) {
     return getBestMoneyBatch(ns, target, Infinity)
@@ -191,14 +156,15 @@ export function getOptimalMoneyBatch(ns, target) {
 import { RamUsage, Threads, distributeThreads } from "HybridShotgunBatcher/Helpers"
 
 
-import { BatchData, WGHData } from "HybridShotgunBatcher/Dashboard/DataClasses"
+import { BatchData, LogEntry, WGHData } from "HybridShotgunBatcher/Dashboard/DataClasses"
+import { numCycleForGrowth } from "Helpers/MyFormulas"
 
 
 /** 
  * @param {NS} ns 
  * @returns a Batch dataClass instance
 */
-export async function startBatch(ns,
+export function startBatch(ns,
     target,
     batch,
     execTime = null
@@ -209,12 +175,13 @@ export async function startBatch(ns,
     const gTime = ns.getGrowTime(target)
     const hTime = ns.getHackTime(target)
 
+    // exec order: ghw
     /**   
      * now W G    H  execTime
      *  v  v v    v     v 
      *  |--I-----------|
-     *  |----I--------|
-     *  |---------I--|
+     *  |---------I---|
+     *  |----I-------|
      *  |-|          |-|
      *  Msec      2 * WGHMargin
      *               |--|
@@ -225,9 +192,10 @@ export async function startBatch(ns,
 
     const toExec = execTime ? execTime - Date.now() : wTime + WGHMargin
 
+    // exec order: ghw
     const toWStart = toExec - wTime - WGHMargin * 1
-    const toGStart = toExec - gTime - WGHMargin * 2
-    const toHStart = toExec - hTime - WGHMargin * 3
+    const toHStart = toExec - hTime - WGHMargin * 2
+    const toGStart = toExec - gTime - WGHMargin * 3
 
     // ns.printf("starting hack with %i", threads.hack)
     // ns.printf("  start   : %f", toHStart)
@@ -251,19 +219,23 @@ export async function startBatch(ns,
     if (toWStart < 0 | toGStart < 0 | toHStart < 0) {
         const errorMsg =
             "execTime to small \n"
+            + "now: " + Date.now() + "\n"
             + "toWStart: " + toWStart + "\n"
             + "toGStart: " + toGStart + "\n"
             + "toHStart: " + toHStart + "\n"
             + "toExec: " + toExec + "\n"
             + "execTime: " + execTime + "\n"
             + "wTime: " + wTime + "\n"
+            + "sec: " + ns.getServerSecurityLevel(target) + "\n"
+            + "min sec: " + ns.getServerMinSecurityLevel(target) + "\n"
 
         // execTime to small
         ns.print("didn't start batch, " + errorMsg)
 
-        ns.tail()
-        // return false
-        throw new Error(errorMsg)
+        // ns.tail()
+        // throw new Error(errorMsg)
+
+        return false
     }
 
     // ns.printf("starting batch at %i", Date.now())
@@ -297,33 +269,176 @@ export async function startBatch(ns,
 
 
     // data things
-    const wData = new WGHData(
-        "weaken",
-        wTime,
-        batch.weaken,
-        toWStart - toWStart,
-    )
-
-    const gData = new WGHData(
-        "grow",
-        gTime,
-        batch.grow,
-        toGStart - toWStart,
-    )
-
-    const hData = new WGHData(
-        "hack",
-        hTime,
-        batch.hack,
-        toHStart - toWStart,
-    )
-
     const batchData = new BatchData(
-        wData,
-        gData,
-        hData
+        new WGHData(
+            "weaken",
+            wTime,
+            batch.weaken,
+            toWStart,
+        ),
+        new WGHData(
+            "grow",
+            gTime,
+            batch.grow,
+            toGStart,
+        ),
+        new WGHData(
+            "hack",
+            hTime,
+            batch.hack,
+            toHStart,
+        )
     )
 
     return batchData
 }
 
+
+class RamAlloc {
+    /**
+     * @param {NS} ns 
+     */
+    constructor(ns) {
+        this.ns = ns
+        this.secHoleStart = getLowSecHoleStart()
+
+        // the ram usage for the sec holes starting at the one we´re in
+        // i.e the first element is the ram usage for the current lowSecHole
+        this.secHoleRamUsage = []
+    }
+
+    allocRam(startTime, execTime, ramAmount) {
+        /**
+         * the ram is allocated for all sec holes before the execTime and 
+         * after the startTime (including the secHole that the startTime is in)
+         */
+
+        const curSecHoleStart = this.secHoleStart
+
+        const lastCoveredSecHole = getLowSecHoleStart(execTime)
+        const firstCoveredSecHole = getLowSecHoleStart(startTime)
+
+        const holesToFirst = (firstCoveredSecHole - curSecHoleStart) / execTime
+        const holesToLast = (lastCoveredSecHole - curSecHoleStart) / execTime
+
+        // add new low sec holes to store the ram usage in
+        this.secHoleRamUsage = extendListTo(this.secHoleRamUsage, holesToLast, () => 0)
+
+        for (const i = holesToFirst; i <= holesToLast; i++) {
+            this.secHoleRamUsage[i] += ramAmount
+        }
+
+    }
+
+    /**
+     * @param {NS} ns 
+     * @param {Batch} scheduleData 
+     */
+    allocBatchRam(batch, target, execTime) {
+
+        /**   
+         * now W G    H  execTime
+         *  v  v v    v     v 
+         *  |--I-----------|
+         *  |----I--------|
+         *  |---------I--|
+         *  |-|          |-|
+         *  Msec      2 * WGHMargin
+         *               |--|
+         *            3 * WGHMargin
+         * (Msec i.e additionalMsec)
+         */
+
+        const ns = this.ns
+
+        const wRam = batch.wRam()
+        const gRam = batch.gRam()
+        const hRam = batch.hRam()
+
+        const wTime = ns.getWeakenTime(target)
+        const gTime = ns.getGrowTime(target)
+        const hTime = ns.getHackTime(target)
+
+        const wStart = execTime - wTime - WGHMargin * 1
+        const gStart = execTime - gTime - WGHMargin * 2
+        const hStart = execTime - hTime - WGHMargin * 3
+
+        this.allocRam(wStart, execTime, wRam)
+        this.allocRam(gStart, execTime, gRam)
+        this.allocRam(hStart, execTime, hRam)
+    }
+
+    removeOldSecHoleData() {
+        // remove the allocation data / start data 
+        // from the lowSecHole that is now before Date.now()
+
+        const curSecHoleStart = getLowSecHoleStart()
+        const nFromOldToNewHole = (curSecHoleStart - this.secHoleStart) / execMargin
+
+        this.secHoleRamUsage = this.secHoleRamUsage.slice(nFromOldToNewHole)
+
+        this.secHoleStart = curSecHoleStart
+    }
+
+    getAvailableHsbRam() {
+        this.removeOldSecHoleData()
+
+        return Math.max(0, this.getTotalHsbRam() - this.secHoleRamUsage[0])
+    }
+}
+
+// ram allocated batch
+/**
+ * 
+ * @param {NS} ns 
+ * @param {RamAlloc} ramAlloc 
+ * @param {*} target 
+ * @param {*} targetData 
+ */
+export function test(ns, ramAlloc, target, targetData) {
+    ramAlloc.allocBatchRam(targetData.batch, target, targetData.execTime)
+
+    startBatch(ns, target, targetData.batch, targetData.execTime)
+}
+
+
+// logged shotgun
+export function startShotgun(ns, nBatches) {
+    let batchData = null
+    let batches = 0
+
+    for (let i = 0; i < nBatches; i++) {
+        subShotgunBatchExecTimes.push(targetData.execTime)
+
+        const returnVal = startBatch(ns, target, targetData.batch, targetData.execTime)
+
+        if (returnVal != false) {
+            batches++
+            batchData = returnVal
+        }
+        // console.log("--6", Date.now())
+
+        targetData.execTime += minDeltaBatchExec
+    }
+
+    if (batchData != false) {
+        const logEntry = new LogEntry(
+            Date.now(),
+            new ShotgunData(
+                batchData,
+                0,
+                minDeltaBatchExec,
+                nBatches - i
+            ),
+            "ShotgunData"
+        )
+
+        logEntry.writeToPort(loggingPortHandle)
+    }
+
+    return batches
+}
+
+
+
+// TODO precalc everything before the low sec hole starts 

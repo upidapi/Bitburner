@@ -278,6 +278,7 @@ class Drawer {
 
             let thingWidth
 
+            // console.log(data)
             if (data instanceof WGHData) {
                 // always draw this 
                 thingWidth = this.drawWGH(y, startTime, data)
@@ -425,6 +426,10 @@ export function filterShown(guiData, things, option) {
             const startTime = x.startTime
             const data = x.data
 
+            // if (data.target != "clarkinc") {
+            //     return false
+            // }
+
             if (option) {
                 return guiData.timeToPos(startTime) >= 0
             } else {
@@ -443,14 +448,15 @@ export async function main(ns) {
     const portNum = ns.args[0]
     const port = ns.getPortHandle(portNum)
 
-    const target = ns.args[1]
-
     let things = []
 
     const p5 = await getP5(ns, ns.pid)
     const guiData = new GuiData(ns, p5)
     const drawer = new Drawer(p5, guiData)
 
+    ns.moveTail(0, 0)
+    ns.resizeTail(900, 900)
+    
     // const shotgun =
     //     new ShotgunData(
     //         new BatchData(
@@ -523,4 +529,32 @@ export async function main(ns) {
         await ns.sleep(0)
     }
 }
-
+const x = {
+    "startTime": 1690360705584,
+    "data":
+    {
+        "batch": {
+            "wI": {
+                "WGHType": "weaken",
+                "duration": 279746.2652462292,
+                "threads": 22, "aSec": 7.999890489561949
+            },
+            "gI": {
+                "WGHType": "grow",
+                "duration": 223797.01219698336,
+                "threads": 239,
+                "aSec": 55953.252939735394
+            },
+            "hI": {
+                "WGHType": "hack", 
+                "duration": 69936.5663115573, 
+                "threads": 53, 
+                "aSec": 209815.69882516144
+            }
+        },
+        "sleepCorrector": 0, 
+        "deltaBatch": 6, 
+        "nBatches": 1
+    },
+    "dataClass": "ShotgunData"
+}

@@ -12,7 +12,10 @@ import { getMinSecWeakenTime } from "Helpers/MyFormulas"
  * gets the (average) money per sec for a given batch and target
  */
 export function getMoneyPerMs(ns, target, batch) {
-    const hackChance = calcMinHackChance(ns, target)
+    const gSecInc = ns.growthAnalyzeSecurity(batch.grow, target)
+    const secWhenHack = ns.getServerMinSecurityLevel(target) + gSecInc
+
+    const hackChance = calcMinHackChance(ns, target, secWhenHack)
 
     const hackPart = ns.hackAnalyze(target) * batch.hack
 
