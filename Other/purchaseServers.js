@@ -16,7 +16,7 @@ function getServerName(ns, ramPow) {
 
 
 /** @param {NS} ns */
-export async function purchaseMaxServers(ns, moneyAvailable = null) {
+export async function purchaseMaxServers(ns, logging = false, moneyAvailable = null) {
     if (moneyAvailable == null) {
         moneyAvailable = ns.getServerMoneyAvailable("home")
     }
@@ -85,7 +85,9 @@ export async function purchaseMaxServers(ns, moneyAvailable = null) {
                 const newServerName = getServerName(ns, i)
                 ns.renamePurchasedServer(smallest, newServerName)
 
-                ns.tprintf(`upgraded server (${smallest} => ${newServerName})`)
+                if (logging) {
+                    ns.print(`upgraded server (${smallest} => ${newServerName})`)
+                }
 
                 moneyAvailable -= cost
 

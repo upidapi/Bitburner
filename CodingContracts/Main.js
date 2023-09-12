@@ -16,8 +16,8 @@ import { getShortestPath } from "CodingContracts/Solvers/ShortestPath";
 import { findValidMath } from "CodingContracts/Solvers/FindMathExpressions";
 import { getSanitizedPar } from "CodingContracts/Solvers/SanitizeParentheses";
 import { compressRLE } from "CodingContracts/Solvers/CompressionRLE";
-import { compressLZ, decompressLZ } from "CodingContracts/Solvers/CompressionLZ";
 import { ceasarCipher, vCipher } from "CodingContracts/Solvers/Cipher";
+import { compressLZ, decompressLZ } from "CodingContracts/Solvers/CompressionLZ";
 
 export const typeToFuncMap = {
     "Minimum Path Sum in a Triangle": trianglePathSum,
@@ -52,6 +52,14 @@ export const typeToFuncMap = {
 import { deFormatGameNum } from "Helpers/Formatting";
 
 function getRewardData(reward) {
+    // dummy contracts don't give rewards
+    if (reward == "No reward for this contract") {
+        return {
+            "type": "money",
+            "amount": 0
+        }
+    }
+
     // all of the rewards starts with this
     reward = reward.slice("Gained ".length)
 
@@ -108,7 +116,7 @@ function getRewardData(reward) {
         return {
             "type": "faction reputation",
             "amount": fRepGain,
-            "factions": [factions]
+            "factions": factions
         }
     }
 
@@ -230,12 +238,14 @@ export function solveContracts(ns, logToTerminal = false) {
         }
 
         if (rewardData.type == "faction reputation") {
-            for (let faction of rewardData.factions) {
-                if (rewards["faction reputation"][faction] == undefined) {
-                    rewards["faction reputation"][faction] = 0
+            for (let factions of rewardData.factions) {
+                for (const faction of factions) {
+                    if (rewards["faction reputation"][faction] == undefined) {
+                        rewards["faction reputation"][faction] = 0
+                    }
+    
+                    rewards["faction reputation"][faction] += rewardData.amount   
                 }
-
-                rewards["faction reputation"][faction] += rewardData.amount
             }
         }
 
@@ -259,8 +269,8 @@ export function solveContracts(ns, logToTerminal = false) {
         "",
         "faction reputation gain:")
 
-    for (let faction in rewards["faction reputation"]) {
-        resultList.push(`  ${faction}: ${rewards["faction reputation"][faction]}`)
+    for (let factions in rewards["faction reputation"]) {
+        resultList.push(`  ${factions.join(", ")}: ${rewards["faction reputation"][faction]}`)
     }
 
     resultList.push(
@@ -287,5 +297,6 @@ export function solveContracts(ns, logToTerminal = false) {
 
 /** @param {NS} ns */
 export async function main(ns) {
+    ns.disableLog("ALL")
     solveContracts(ns, JSON.parse(ns.args[0]))
 }

@@ -2,6 +2,7 @@ import { estimateX } from "Helpers/EstimateX"
 import { calcMinHackChance, getMinSecWeakenTime } from "Helpers/MyFormulas"
 import { getServers } from "Other/ScanServers"
 import { Batch } from "thread/Other"
+import { BatchStartMargin, DeltaBatchExec } from "thread/Setings"
 
 const RamUsage = {
     "hack": 1.70, // ns.getScriptRam("HybridShotgunBatcher/ThreadScripts/ThreadHack.js")
@@ -9,7 +10,7 @@ const RamUsage = {
     "weaken": 1.75 // ns.getScriptRam("HybridShotgunBatcher/ThreadScripts/ThreadHack.js")
 }
 
-function getBestMoneyBatch(ns, target, availableRam) {
+export function getBestMoneyBatch(ns, target, availableRam) {
     function hackThreadsToRam(hackThreads) {
         // exec order: ghw
         batch.hack = Math.floor(hackThreads)
@@ -38,7 +39,7 @@ function getBestMoneyBatch(ns, target, availableRam) {
     const hackForHalf = 0.5 / hackPart
     let batch = new Batch()
 
-    estimateX(ns, hackThreadsToRam, availableRam, 0, hackForHalf, -3, 0, "min")
+    estimateX(ns, hackThreadsToRam, availableRam, 0, hackForHalf, 0, 0, "min")
 
     return batch
 }
@@ -53,7 +54,7 @@ function getBestMoneyBatch(ns, target, availableRam) {
  * Without considering the ram usage.
  * */
 
-function getOptimalMoneyBatch(ns, target) {
+export function getOptimalMoneyBatch(ns, target) {
     return getBestMoneyBatch(ns, target, Infinity)
 }
 
@@ -158,7 +159,7 @@ export function getOptimalFixBatch(ns, target) {
  * 
  * gets the (average) money per sec per ram for a given batch and target
  */
-function getMoneyPerMsPerRam(ns, target, batch) {
+function getMoneyPerMs(ns, target, batch) {
     const gSecInc = ns.growthAnalyzeSecurity(batch.grow, target)
     const secWhenHack = ns.getServerMinSecurityLevel(target) + gSecInc
 
@@ -169,10 +170,7 @@ function getMoneyPerMsPerRam(ns, target, batch) {
     const batchTime = getMinSecWeakenTime(ns, target)
     const moneyPerMs = averageHackAmount / batchTime
 
-    const averageRam = batch.averageRamUsage()
-    const moneyPerMsPerRam = moneyPerMs / averageRam
-
-    return moneyPerMsPerRam
+    return moneyPerMs
 }
 
 
@@ -186,17 +184,19 @@ export class TargetData {
         this.target = target
         this.execTime = performance.now()
         this.batch = getOptimalMoneyBatch(ns, target)
-        this.fixedStatus = 0
+        
+        this.fixComplete = 0 
+        this.secAftFix = ns.getServerSecurityLevel(target)
         this.security = ns.getServerSecurityLevel(target)
     }
 
     copy(ns) {
         const copy = new TargetData(ns, this.target)
-        
+
         copy.execTime = this.execTime
         copy.fixedStatus = this.fixedStatus
         copy.batch = this.batch
-        
+
         return copy
     }
 }
@@ -211,6 +211,11 @@ export function getTargetsData(ns) {
 
     let targetsData = []
     for (const target of servers) {
+        // no pint in hacking "empty" servers
+        if (ns.getServerMaxMoney(target) == 0) {
+            continue
+        }
+
         targetsData.push(new TargetData(ns, target))
     }
 
@@ -261,15 +266,15 @@ export function getRoot(ns, target) {
  * @param {NS} ns 
  * @param {Array<TargetData>} targetsData 
  */
-export function getBestTarget(ns, targetsData) {
+export function getBestTarget(ns, targetsData, totalRam) {
     const level = ns.getHackingLevel()
 
     let bestTarget = null
-    let bestMoney = 0
+    let bestMoneyPerMs = 0
 
     for (const targetData of targetsData) {
         const target = targetData.target
-        
+
         // we can't hack our own servers
         if (target.startsWith("pserver-2^")) {
             continue
@@ -288,12 +293,35 @@ export function getBestTarget(ns, targetsData) {
         }
 
         const batch = targetData.batch
-        const moneyPerMsPerRam = getMoneyPerMsPerRam(ns, target, batch)
-        
+        const moneyPerMsPerBatch = getMoneyPerMs(ns, target, batch)
+
+
+        const ramPerBatch = batch.ramUsage()
+        const maxBatchesRam = totalRam / ramPerBatch
+
+        const startPerMs = 1 / DeltaBatchExec
+        const batchTime =
+            getMinSecWeakenTime(ns, targetData.target)
+            + DeltaBatchExec
+            + BatchStartMargin * 2
+
+        const maxConcurrentBatches = startPerMs * batchTime / 4
+        const maxBatchesTime = maxConcurrentBatches
+
+        const maxBatches = Math.floor(
+            Math.min(
+                maxBatchesRam,
+                maxBatchesTime
+            )
+        )
+            
+        const moneyPerMs = moneyPerMsPerBatch * maxBatches
+        // console.log(targetData, maxBatchesRam, maxBatchesTime, moneyPerMs)
+
         // console.log(moneyPerMsPerRam, target)
 
-        if (moneyPerMsPerRam > bestMoney) {
-            bestMoney = moneyPerMsPerRam
+        if (moneyPerMs > bestMoneyPerMs) {
+            bestMoneyPerMs = moneyPerMs
             bestTarget = targetData
         }
     }

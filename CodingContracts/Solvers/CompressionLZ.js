@@ -1,4 +1,4 @@
- function decompressLZ(data) {
+export function decompressLZ(data) {
     let uncompressed = ""
 
     let type = 0
@@ -62,250 +62,328 @@
 }
 
 
-// the following is exclusively for compressing
-function getOptMul(bef, aft) {
-    // format: compressed version, chars compressed
-    let best = ["0", 0]
+// // the following is exclusively for compressing
+// function getOptMul(bef, aft) {
+//     // format: compressed version, chars compressed
+//     let best = ["0", 0]
 
-    let maxMulLen = Math.min(9, bef.length)
+//     let maxMulLen = Math.min(9, bef.length)
 
-    for (let i = 1; i <= maxMulLen; i++) {
+//     for (let i = 1; i <= maxMulLen; i++) {
 
-        // the part to be "extended" "j" characters
-        let mulPart = bef.slice(-i)
+//         // the part to be "extended" "j" characters
+//         let mulPart = bef.slice(-i)
 
-        // j i.e extendLength
-        let j = 0
-        while (aft[j] == mulPart[j % mulPart.length]) {
-            j++
-        }
-
-        if (j > best[1]) {
-            best = [`${j}${i}`, j]
-        }
-    }
-
-    return best
-}
-
-function getT1Options(aft) {
-    let maxSecLen = Math.min(9, aft.length)
-
-    let options = []
-    for (let i = 0; i <= maxSecLen; i++) {
-        let befPart = aft.slice(0, i)
-
-        options.push([`${i}${befPart}`, i])
-    }
-
-    return options
-}
-
- function compressLZ(uncompressed) {
-    // let bestOptions = [
-    //     //["cL", "cV"]
-    //     [0, ""]
-    // ]
-
-    // function addToBest(comVer, conLen) {
-    //     for (let i in bestOptions) {
-    //         let [cL, cV] = bestOptions[i]
-
-    //         if (cL > conLen) {
-    //             // insert [cL, cV] at i
-    //             break
-    //         }
-
-    //         if (cL == conLen) {
-    //             if (comVer.length < cV.length) {
-    //                 bestOptions[conLen] = comVer
-    //             }
-    //         }
-    //     }
-    // }
-
-    let bestOptions = {
-        0: ""
-    }
-
-    function addToBest(cV, cL) {
-        if (bestOptions[cL] == undefined) {
-            bestOptions[cL] = cV
-            return
-        }
-
-        if (cV.length < bestOptions[cL].length) {
-            bestOptions[cL] = cV
-        }
-    }
-
-    // cV := compressed version
-    // cL := contracted length
-
-    let start = 0
-    // option = [cV, cL]
-    while (true) {
-        let beforeCom = bestOptions[start]
-
-        if (start == uncompressed.length) {
-            return beforeCom
-        }
-
-        let T1Options = getT1Options(uncompressed.slice(start))
-        for (let [cV, cL] of T1Options) {
-
-            if (start + cL == uncompressed.length) {
-                // we have reached the end
-
-                // therefor the last chunk can also be of type 2
-
-                let bef = uncompressed.slice(0, start)
-                let aft = uncompressed.slice(start)
-
-                let [cMV, mulLen] = getOptMul(bef, aft)
-
-                addToBest(beforeCom + cV, start + cL)
-
-                if (mulLen == cL) {
-                    // if using type 2 is possible add that as a possibility
-
-                    addToBest(beforeCom + cMV, start + mulLen)
-                }
-
-                continue
-            }
-
-            let bef = uncompressed.slice(0, start + cL)
-            let aft = uncompressed.slice(start + cL)
-
-            let [cMV, mulLen] = getOptMul(bef, aft)
-
-            if (start + cL + mulLen == uncompressed.length) {
-                // we have reached the end
-
-                let T1Options = getT1Options(uncompressed.slice(start + cL))
-
-                // p := possible
-                let [pCV, pCL] = T1Options[T1Options.length - 1]
-
-                addToBest(beforeCom + cV + cMV, start + cL + mulLen)
-
-                if (pCL == mulLen) {
-                    // if using type 1 is possible add that 
-
-                    addToBest(beforeCom + cV + pCV, start + cL + pCL)
-                }
-
-                continue
-            }
-
-            addToBest(beforeCom + cV + cMV, start + cL + mulLen)
-        }
-
-        // get next smallest start
-        for (let x of Object.keys(bestOptions).sort((a, b) => a - b)) {
-            x = parseInt(x)
-
-            if (x > start) {
-                start = x
-                break
-            }
-        }
-    }
-
-}
-
-// console.log(decompressLZ(compressLZ("SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34")) == "SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34")
-// // SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34
-// // SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmm5TqR73CP4189nqpC32783
-
-// console.log(decompressLZ(compressLZ("SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34")))
-// console.log(compressLZ("SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34"))
-
-// console.log(compressLZ("ababac"))
-
-// console.log("----")
-
-// console.log(compressLZ("BqhbfA5Fr74cfA5Fr74cjxcr74cjxcsrhsupoYWhMS4b5s5sW35Ip363sW35Ip3IgZ5cHHHHH"))
-// console.log()
-
-// let a, b
-
-// [a, b] = x
-
-// console.log(a, b, x)
-// RKSyqSyqSycqSycqSycqSycqSySJycqSySJycpjA1B1CFhc6M61CFhc6M6ufF6QC8C8C8C8C888888undefinedundefined
-// RKSyqSyqSycqSycqSycqSycqSySJycqSySJycpjA1B1CFhc6M61CFhc6M6ufF6QC8C8C8C88Z8C88m8m8m8m8
-
-
-// function comprLZDecode(compr) {
-//     let plain = "";
-
-//     for (let i = 0; i < compr.length;) {
-//         const literal_length = compr.charCodeAt(i) - 0x30;
-
-//         if (literal_length < 0 || literal_length > 9 || i + 1 + literal_length > compr.length) {
-//             return null;
+//         // j i.e extendLength
+//         let j = 0
+//         while (aft[j] == mulPart[j % mulPart.length]) {
+//             j++
 //         }
 
-//         plain += compr.substring(i + 1, i + 1 + literal_length);
-//         i += 1 + literal_length;
-
-//         if (i >= compr.length) {
-//             break;
-//         }
-//         const backref_length = compr.charCodeAt(i) - 0x30;
-
-//         if (backref_length < 0 || backref_length > 9) {
-//             return null;
-//         } else if (backref_length === 0) {
-//             ++i;
-//         } else {
-//             if (i + 1 >= compr.length) {
-//                 return null;
-//             }
-
-//             const backref_offset = compr.charCodeAt(i + 1) - 0x30;
-//             if ((backref_length > 0 && (backref_offset < 1 || backref_offset > 9)) || backref_offset > plain.length) {
-//                 return null;
-//             }
-
-//             for (let j = 0; j < backref_length; ++j) {
-//                 plain += plain[plain.length - backref_offset];
-//             }
-
-//             i += 2;
+//         if (j > best[1]) {
+//             best = [`${j}${i}`, j]
 //         }
 //     }
 
-//     return plain;
+//     return best
 // }
 
-// console.log(decompressLZ("1a312b1a"))
+// function getT1Options(aft) {
+//     let maxSecLen = Math.min(9, aft.length)
 
-// console.log(decompressLZ("5aa02ab72"))
-// console.log(decompressLZ( "5RKSyq531c640982SJ979pjA1B1CFh04c6M6887ufF6QC86228Z451m72"))
-// console.log(comprLZDecode("5RKSyq531c640982SJ979pjA1B1CFh04c6M6887ufF6QC86228Z451m72"))
+//     let options = []
+//     for (let i = 0; i <= maxSecLen; i++) {
+//         let befPart = aft.slice(0, i)
 
-// console.log(decompressLZ( "2C86228Z451m72"))
-// console.log(comprLZDecode("2C86228Z451m72"))
+//         options.push([`${i}${befPart}`, i])
+//     }
 
-// console.log(decompressLZ( "2C86228Z451m72"))
-// console.log(comprLZDecode("2C86228Z451m72"))
+//     return options
+// }
 
-// console.log(decompressLZ( "2C862"))
-// console.log(comprLZDecode("2C862"))
+// export function compressLZ(uncompressed) {
+//     // let bestOptions = [
+//     //     //["cL", "cV"]
+//     //     [0, ""]
+//     // ]
 
-// console.log(decompressLZ( "2C86228Z451m72"))
-// console.log(comprLZDecode("2C86228Z451m72"))
+//     // function addToBest(comVer, conLen) {
+//     //     for (let i in bestOptions) {
+//     //         let [cL, cV] = bestOptions[i]
+
+//     //         if (cL > conLen) {
+//     //             // insert [cL, cV] at i
+//     //             break
+//     //         }
+
+//     //         if (cL == conLen) {
+//     //             if (comVer.length < cV.length) {
+//     //                 bestOptions[conLen] = comVer
+//     //             }
+//     //         }
+//     //     }
+//     // }
+
+//     let bestOptions = {
+//         0: ""
+//     }
+
+//     function addToBest(cV, cL) {
+//         if (bestOptions[cL] == undefined) {
+//             bestOptions[cL] = cV
+//             return
+//         }
+
+//         if (cV.length < bestOptions[cL].length) {
+//             bestOptions[cL] = cV
+//         }
+//     }
+
+//     // cV := compressed version
+//     // cL := contracted length
+
+//     let start = 0
+//     // option = [cV, cL]
+//     while (true) {
+//         let beforeCom = bestOptions[start]
+
+//         if (start == uncompressed.length) {
+//             return beforeCom
+//         }
+
+//         let T1Options = getT1Options(uncompressed.slice(start))
+//         for (let [cV, cL] of T1Options) {
+
+//             if (start + cL == uncompressed.length) {
+//                 // we have reached the end
+
+//                 // therefor the last chunk can also be of type 2
+
+//                 let bef = uncompressed.slice(0, start)
+//                 let aft = uncompressed.slice(start)
+
+//                 let [cMV, mulLen] = getOptMul(bef, aft)
+
+//                 addToBest(beforeCom + cV, start + cL)
+
+//                 if (mulLen == cL) {
+//                     // if using type 2 is possible add that as a possibility
+
+//                     addToBest(beforeCom + cMV, start + mulLen)
+//                 }
+
+//                 continue
+//             }
+
+//             let bef = uncompressed.slice(0, start + cL)
+//             let aft = uncompressed.slice(start + cL)
+
+//             let [cMV, mulLen] = getOptMul(bef, aft)
+
+//             if (start + cL + mulLen == uncompressed.length) {
+//                 // we have reached the end
+
+//                 let T1Options = getT1Options(uncompressed.slice(start + cL))
+
+//                 // p := possible
+//                 let [pCV, pCL] = T1Options[T1Options.length - 1]
+
+//                 addToBest(beforeCom + cV + cMV, start + cL + mulLen)
+
+//                 if (pCL == mulLen) {
+//                     // if using type 1 is possible add that 
+
+//                     addToBest(beforeCom + cV + pCV, start + cL + pCL)
+//                 }
+
+//                 continue
+//             }
+
+//             addToBest(beforeCom + cV + cMV, start + cL + mulLen)
+//         }
+
+//         // get next smallest start
+//         for (let x of Object.keys(bestOptions).sort((a, b) => a - b)) {
+//             x = parseInt(x)
+
+//             if (x > start) {
+//                 start = x
+//                 break
+//             }
+//         }
+//     }
+
+// }
 
 
-// console.log(decompressLZ( "2C22"))
-// console.log(comprLZDecode("2C22"))
+function getT1Options(start, uncompressed) {
+    const t1Options = []  // [[["0"], 0]]
+    for (let i = 0; i < 10; i++) {
+        if (i + start > uncompressed.length) {
+            break
+        }
 
-// console.log(decompressLZ("5ChbcZ8408522c812kK512IK9467AuYKg619kmjoLp0na"))
-// console.log(comprLZDecode("5ChbcZ8408522c812kK512IK9467AuYKg619kmjoLp0na"))
-// console.log(comprLZDecode("5aa03bbb"))
+        const part = uncompressed.slice(start, i + start)
 
-// RKSyqSyqSycqSycqSycqSycqSySJycqSySJycpjA1B1CFhc6M61CFhc6M6ufF6QC8C8C8C8C888888undefinedundefined
-// RKSyqSyqSycqSycqSycqSycqSySJycqSySJycpjA1B1CFhc6M61CFhc6M6ufF6QC8C8C8C88Z8C88m8m8m8m8
+        t1Options.push([
+            [i.toString(), ...part],
+            i
+        ])
+    }
+
+    return t1Options
+}
+
+
+function getT2Options(start, uncompressed) {
+    // cLen, [compressed, uLen]
+    const t2Options = [[["0"], 0]]
+
+    // i := how long back
+    for (let i = 1; i < 10; i++) {
+        if (start - i < 0) {
+            break
+        }
+
+        // j := chars copied 
+        label: for (let j = 1; j < 10; j++) {
+            if (start + j > uncompressed.length) {
+                break
+            }
+
+            const befPart = uncompressed.slice(start - i, start).join("")
+            const fullPart = decompressLZ(`${i}${befPart}${j}${i}`)
+
+            for (let k = 0; k < i + j; k++) {
+                if (fullPart[k] != uncompressed[start - i + k]) {
+                    // remove invalid options
+                    continue label
+                }
+            }
+
+            t2Options.push([
+                [j.toString(), i.toString()],
+                j
+            ])
+        }
+    }
+
+    return reduceOptions(t2Options)
+}
+
+function reduceOptions(options) {
+    const merge = {}
+
+    for (const option of options) {
+        if (merge[option[1]] == undefined) {
+            merge[option[1]] = []
+        }
+
+        merge[option[1]].push(option)
+    }
+
+    let bestULen = -1
+    const out = []
+    for (let [uLen, data] of Object.entries(merge)) {
+        uLen = JSON.parse(uLen)
+
+        if (uLen <= bestULen) {
+            continue
+        }
+
+        // data
+        // [[compressed, uLen]]
+        // uLen i.e how many chars we compressed
+
+        let best = data[0]
+        for (const [compressed, _] of data.slice(1)) {
+            if (compressed.length < best[0].length) {
+                best = [compressed, uLen]
+            }
+        }
+
+        bestULen = best[1]
+
+        out.push(best)
+    }
+
+    return out 
+}
+
+/**
+ * 
+ * @param {String[]} uncompressed 
+ */
+export function compressLZ(uncompressed) {
+    uncompressed = [...uncompressed]
+
+    // compressed, uLen
+    let bestOptions = [[[], 0]]
+
+    while (true) {
+        let [compressed, uLen] = bestOptions[0]
+
+        // for (const endOption of getEndOptions(uLen, uncompressed)) {
+        //     bestOptions.push([
+        //         [...compressed, ...endOption[0]],
+        //         uLen + endOption[1]
+        //     ])
+        // }
+
+        for (const nextPart of getT1Options(uLen, uncompressed)) {
+
+            if (uLen + nextPart[1] == uncompressed.length) {
+                bestOptions.push([
+                    [...compressed, ...nextPart[0]],
+                    uLen + nextPart[1]
+                ])
+
+                continue
+            }
+
+            // for (const endOption of getEndOptions(uLen + nextPart[1], uncompressed)) {
+            //     bestOptions.push([
+            //         [...compressed, ...nextPart[0], ...endOption[0]],
+            //         uLen + nextPart[1] + endOption[1]
+            //     ])
+            // }
+
+            for (const nextNextPart of getT2Options(uLen + nextPart[1], uncompressed)) {
+                bestOptions.push([
+                    [...compressed, ...nextPart[0], ...nextNextPart[0]],
+                    uLen + nextPart[1] + nextNextPart[1]
+                ])
+            }
+        }
+
+        bestOptions = reduceOptions(bestOptions)
+
+        bestOptions.shift(0)
+
+        if (bestOptions.length == 1) {
+            const bestFullCompression = bestOptions[0][0]
+            return bestFullCompression.join("")
+        }
+    }
+}
+
+// const x = decompressLZ("1a91031")
+// const y = decompressLZ("1a9131")
+
+// const inputs = [
+//     "mississippi",
+//     "SzHUzHUzHUzHUuR8pHUzHUWFWJiYbPPPPPxCPPPxCPmxCPmxCPmxCPTqRS8CPTqRS8CPCP4RnYC7qpC32YC7qpC34"
+// ]
+
+// for (const input of inputs) {
+//     const output = compressLZ2(input)
+//     const reInput = decompressLZ(output)
+//     console.log({
+//         "input": input,
+//         "reInput": reInput,
+//         "output": output
+//     })
+
+// }
+
+// console.log("hi")

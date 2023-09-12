@@ -1,4 +1,6 @@
 import { nextValWrite } from "thread/Other"
+import { DeltaThreadExec } from "thread/Setings"
+import { TargetData } from "thread/Targeting"
 
 export function extendListTo(list, newLen, defaultValFunc) {
     const extraNeededElements = newLen - list.length
@@ -11,6 +13,13 @@ export function extendListTo(list, newLen, defaultValFunc) {
 }
 
 
+/**
+ * @param {NS} ns 
+ * @param {Number} ms 
+ * @param {TargetData} targetData 
+ * @param {Number} minMs 
+ * @returns 
+ */
 export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
     /**
      * sleeps (up to) {ms} ms, guaranteeing that we will be 
@@ -21,8 +30,16 @@ export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
     const minFinishTime = now + minMs
     const finishTime = now + ms
 
+    if (typeof targetData.fixedStatus == "number") {
+        if (minFinishTime >= targetData.fixedStatus) {
+            targetData.security = minSec
+        }
+    }
+
+
+
     while (true) {
-        const retVal = await Promise.race([
+        await Promise.race([
             nextValWrite(ns,
                 ns.pid,
                 [
@@ -34,37 +51,55 @@ export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
             ns.asleep(finishTime - performance.now())
         ])
 
-        // console.log(retVal)
-
-        // reached the finishTime whiteout any workers finishing 
-        if (retVal == null) {
-            return
-        }
-
         while (true) {
-            const expectedSec = targetData.security
             const sec = ns.getServerSecurityLevel(targetData.target)
 
-            if (sec <= expectedSec) {
+            if (performance.now() >= targetData.fixComplete) {
+                targetData.security = targetData.secAftFix
+            }
+
+            if (sec <= targetData.security) {
                 // we have complected all of the threads of the batch
 
                 if (performance.now() > minFinishTime) {
-                    // console.log("finish")
+                    console.log("finish")
                     return
                 }
 
                 // console.log("wait", minFinishTime -  performance.now())
                 break
             }
-            // console.log("expectedSec/sec", expectedSec, sec)
 
-            // const s = performance.now()
-            await nextValWrite(ns,
-                ns.pid,
-                [
-                    "weaken worker finished",
-                ]
-            )
+            // console.log(
+            //     Object.assign({}, targetData),
+            //     "expectedSec/sec",
+            //     targetData.security,
+            //     targetData.secAftFix,
+            //     sec,
+            //     targetData.fixComplete - performance.now(),
+            //     targetData.fixComplete)
+
+            const s = performance.now()
+
+            // error data/protection
+            while (true) {
+                const retVal = await Promise.race([
+                    nextValWrite(ns,
+                        ns.pid,
+                        [
+                            "weaken worker finished",
+                        ]
+                    ),
+                    ns.asleep(1000)
+                ])
+
+                if (retVal == true) {
+                    console.log("waited for 1 sec for fix")
+                } else {
+                    break
+                }
+            }
+
             const e = performance.now()
             // console.log(`captured worker, ${(e - s).toFixed(1)}`)
         }

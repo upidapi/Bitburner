@@ -1,13 +1,10 @@
 import { getMinSecWeakenTime } from "Helpers/MyFormulas"
-import { timeFunction } from "Helpers/Timing"
-import { getBestMoneyBatch } from "HybridShotgunBatcher/Batch"
-import { StartMargin, sleepMargin } from "HybridShotgunBatcher/Settings"
 import { purchaseMaxServers } from "Other/PurchaseServers"
 import { getServers } from "Other/ScanServers"
-import { Batch, getHsbRamData, nextValWrite } from "thread/Other"
-import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, RamWaitTime, SleepAccuracy, SpeedStart, smallNum, DeltaThreadExec, ThreadStartMargin } from "thread/Setings"
-import { TargetData, getBestFixBatch, getBestTarget, getOptimalFixBatch, getTargetsData } from "thread/Targeting"
-import { compileWorker, startWorker } from "thread/Worker"
+import { getHsbRamData } from "thread/Other"
+import { BatchStartMargin, DeltaShotgunExec } from "thread/Setings"
+import { getBestTarget, getTargetsData } from "thread/Targeting"
+import { compileWorker } from "thread/Worker"
 
 
 /**
@@ -26,12 +23,16 @@ async function update(ns,
     const bestTargetData = getBestTarget(ns, speedScheduler.targetsData)
 
     await purchaseMaxServers(ns);
-    
+
     const [totalRam, hsbServersData, availableRam] = getHsbRamData(ns)
 
     const maxEffectiveBatchesRam = totalRam / bestTargetData.batch.averageRamUsage()
 
-    const effectiveBatchTime = getMinSecWeakenTime(ns, bestTargetData.target) + DeltaShotgunExec + StartMargin
+    const effectiveBatchTime =
+        getMinSecWeakenTime(ns, bestTargetData.target)
+        + DeltaShotgunExec
+        + BatchStartMargin
+
     const maxEffectiveBatchesTime = (effectiveBatchTime / effectiveBatchStartTime) * 0.5  // margin of error  
 
     if (maxEffectiveBatchesRam > maxEffectiveBatchesTime) {

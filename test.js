@@ -1,4 +1,4 @@
-heckpointimport { nextValWrite } from "thread/Other"
+import { nextValWrite } from "thread/Other"
 import { safeSleepTo } from "thread/Scheduling/Helpers"
 import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, RamWaitTime, SleepAccuracy, SpeedStart } from "thread/Setings"
 import { TargetData, getBestFixBatch, getOptimalFixBatch } from "thread/Targeting"
@@ -48,10 +48,10 @@ export class SpeedScheduler {
 
         } catch (error) {
             // if the worker fails cancel all started workers in batch
-            for (const worker of batchWorkers) {
-                if (!this.ns.kill(worker)) {
+            for (const [worker, server] of batchWorkers) {
+                if (!this.ns.kill(worker, server)) {
                     // failed to kill worker
-
+                    
                     throw new Error("failed to cancel worker")
                 }
             }

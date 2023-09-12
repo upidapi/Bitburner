@@ -1,10 +1,11 @@
 import { getMinSecWeakenTime } from "Helpers/MyFormulas"
-import { StartMargin } from "HybridShotgunBatcher/Settings"
 import { getHsbRamData } from "thread/Other"
-import { DeltaShotgunExec } from "thread/Setings"
+import { ScheduleData, extendListTo, safeSleepTo } from "thread/Scheduling/Helpers"
+import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, SleepAccuracy, SpeedStart, ThreadStartMargin, smallNum } from "thread/Setings"
+import { getBestFixBatch, getBestMoneyBatch, getOptimalFixBatch } from "thread/Targeting"
+import { startWorker } from "thread/Worker"
 
-export const BatchTime = 200
-
+export const BatchTime = 500
 
 /**
  * pros:
@@ -228,6 +229,8 @@ export class EffectiveScheduler {
         // console.log(startTime, startTime - performance.now(), this.lastShotgunStart - performance.now(), this.shotgunsTo(startTime))
         const shotgunsToStart = this.shotgunsTo(startTime) - 1
 
+        // console.log(shotgunsToStart)
+
         if (shotgunsToStart < 0) {
             throw new Error(
                 `Can't start threads in a surpassed lowSecHole. \n` +
@@ -244,7 +247,7 @@ export class EffectiveScheduler {
      * @param {NS} ns 
      * @param {ScheduleData} scheduleData 
      */
-    async startThreads(scheduleData, compiling = compiling) {
+    async startThreads(scheduleData, compiling = false) {
         const ns = this.ns
 
         // console.log(scheduleData)
@@ -272,13 +275,20 @@ export class EffectiveScheduler {
 
         // console.log(scheduleData)
 
-        const psData = await startWorker(ns,
-            this.hsbServersData,
-            scheduleData.targetData.target,
-            type,
-            scheduleData.targetData.batch[type],
-            scheduleData.execTime - typeOffset
-        )
+        let psData = []
+        try {
+            psData = await startWorker(ns,
+                this.hsbServersData,
+                scheduleData.targetData.target,
+                type,
+                scheduleData.targetData.batch[type],
+                scheduleData.execTime - typeOffset
+            )
+        } catch (error) {
+            console.log("failed to start batch")
+            console.log(error)
+            return false
+        }
 
         if (compiling) {
             for (const pData of psData) {
@@ -295,6 +305,8 @@ export class EffectiveScheduler {
                 }
             }
         }
+
+        return true
     }
 
     /**
@@ -332,7 +344,7 @@ export class EffectiveScheduler {
 
             // const target = scheduleData.targetData.target
 
-            throw new Error(
+            console.log(Error(
                 `can't start batch in the past\n` +
                 `    security: ${ns.getServerSecurityLevel(target)}\n` +
                 `    min sec: ${ns.getServerMinSecurityLevel(target)}\n` +
@@ -343,10 +355,12 @@ export class EffectiveScheduler {
                 `    execTime: ${scheduleData.execTime}\n` +
                 `    startTime: ${startTime}\n` +
                 `    toStart: ${startTime - performance.now()}\n`
-            )
+            ))
 
         } else if (startTime <= maxStart) {
-            await this.startThreads(scheduleData, compiling)
+            if (!await this.startThreads(scheduleData, compiling)) {
+                return
+            }
 
             const type = scheduleData.type
 
@@ -365,6 +379,7 @@ export class EffectiveScheduler {
             await this.attemptThreadStart(scheduleData, maxStart, compiling)
 
         } else {
+
             // schedule it for later
             this.scheduleThreadStartHole(scheduleData)
         }
@@ -457,9 +472,11 @@ export class EffectiveScheduler {
 
             for (const scheduleData of threads) {
                 const s = performance.now()
+
                 await this.attemptThreadStart(scheduleData, time, compiling)
+
                 const e = performance.now()
-                // console.log(e - s)
+                console.log(e - s)
             }
 
             this.shotgunThreadStarts[i] = []
@@ -537,18 +554,27 @@ export class EffectiveScheduler {
         const subBatchTargetData = targetData.copy(ns)
         subBatchTargetData.batch = subBatch
 
-        console.log({
-            "hsbRam": this.hsbRam,
-            "subBatchTargetData": subBatchTargetData,
-            "availableSubBatchRam": availableSubBatchRam,
-            "ramUsage": subBatch.ramUsage()
-        })
+        // console.log({
+        //     "hsbRam": this.hsbRam,
+        //     "subBatchTargetData": subBatchTargetData,
+        //     "availableSubBatchRam": availableSubBatchRam,
+        //     "ramUsage": subBatch.ramUsage()
+        // })
 
         this.subBatchExec = execTime
+        // console.log(
+        //     this.getStartTime(
+        //         targetData.target,
+        //         execTime,
+        //         "weaken"
+        //     ),
+        //     execTime)
 
         if (!this.scheduleBatch(subBatchTargetData)) {
             throw new Error("failed to start subBatch")
         }
+
+        console.log("scheduled sub batch")
     }
 
 
@@ -577,30 +603,27 @@ export class EffectiveScheduler {
     }
 
     /**
-     * @param {TargetData} targetData 
      * @returns {Bool} if it's ok to start batches 
      */
-    scheduleFixIfNeeded(targetData) {
+    scheduleFixIfNeeded() {
         // the this.bestTargetData.execTime is assumed to be fixed
 
         const ns = this.ns
 
+        const targetData = this.bestTargetData
         const target = targetData.target
 
-        if (targetData.fixedStatus == "fixed") {
-            return true
-        }
+        // if (targetData.fixedStatus == "fixed") {
+        //     return true
+        // }
 
         if (this.isFixed(target)) {
-            targetData.fixedStatus = "fixed"
             return true
         }
 
         // don't start multiple simultaneous fix batches 
-        if (typeof targetData.fixedStatus == "number") {
-            if (targetData.fixedStatus + SleepAccuracy > performance.now()) {
-                return false
-            }
+        if (targetData.fixComplete + SleepAccuracy < performance.now()) {
+            return false
         }
 
         const optimalFixBatch = getOptimalFixBatch(ns, target)
@@ -614,7 +637,7 @@ export class EffectiveScheduler {
             targetData.execTime + SleepAccuracy
         )
 
-        console.log(availableRam)
+        // console.log(availableRam)
 
         const fixBatchTargetData = targetData.copy(ns)
         fixBatchTargetData.batch = getBestFixBatch(ns, target, availableRam)
@@ -632,28 +655,48 @@ export class EffectiveScheduler {
             throw new Error("failed to start fix batch")
         }
 
+        // console.log(
+        //     "start",
+        //     Object.assign({}, targetData),
+        //     targetData.fixedStatus,
+        //     targetData.fixedStatus == "fixed")
+
+        targetData.fixComplete = fixBatchTargetData.execTime
+
+        targetData.execTime += DeltaBatchExec
+
         // console.log([...this.shotgunRamUsage], this.hsbRam)
 
         // if speed start is on we won't wait for the last batch 
         // to complete 
-        if (SpeedStart) {
-            if (optimalFixBatch.weaken == fixBatchTargetData.batch.weaken &&
-                optimalFixBatch.grow == fixBatchTargetData.batch.grow &&
-                optimalFixBatch.hack == fixBatchTargetData.batch.hack) {
+        if (optimalFixBatch.weaken == fixBatchTargetData.batch.weaken &&
+            optimalFixBatch.grow == fixBatchTargetData.batch.grow &&
+            optimalFixBatch.hack == fixBatchTargetData.batch.hack) {
 
-                targetData.security = ns.getServerMinSecurityLevel(target)
-                targetData.fixedStatus = "fixed"
+            targetData.secAftFix = ns.getServerMinSecurityLevel(target)
+            console.log("scheduled full fix")
 
+            if (SpeedStart) {
                 // best fix batch is optimal
-                console.log("scheduled fix")
+                console.log("since SpeedStart is on it will start batching now")
                 return true
+
+            } else {
+                targetData.fixedStatus = fixBatchTargetData.execTime
+
+                // todo add a fix status for when the fix is not enough to fully prep the server
+                // probably by adding a .fixComplete
+                // to compliment the .fixStatus 
+
+                return false
             }
         }
 
-        const secDec = ns.weakenAnalyze(optimalFixBatch.weaken, target)
-        targetData.security -= secDec
+        const secDec =
+            ns.weakenAnalyze(optimalFixBatch.weaken)
+            - ns.growthAnalyzeSecurity(optimalFixBatch.grow)
 
-        targetData.fixedStatus = targetData.execTime
+        targetData.secAftFix = targetData.security - secDec
 
         console.log("scheduled sub fix")
         return false
@@ -662,6 +705,7 @@ export class EffectiveScheduler {
     scheduleNewBatches() {
         const ns = this.ns
 
+        const targetData = this.bestTargetData
         const target = this.bestTargetData.target
 
         const wTime = ns.getWeakenTime(target)
@@ -676,7 +720,7 @@ export class EffectiveScheduler {
 
         // console.log(this.shotgunRamUsage)
 
-        if (!this.scheduleFixIfNeeded(targetData)) {
+        if (!this.scheduleFixIfNeeded()) {
             return
         }
 
@@ -701,12 +745,11 @@ export class EffectiveScheduler {
             if (!this.scheduleBatch(targetData)) {
                 // not enough ram for another batch
 
-                // console.log([...this.shotgunRamUsage])
-
                 this.scheduleSubBatch(targetData)
                 break
             }
 
+            // console.log("scheduled full batch")
             targetData.execTime += BatchTime
         }
 
@@ -813,7 +856,11 @@ export class EffectiveScheduler {
 
         const maxForRam = totalRam / bestTargetData.batch.averageRamUsage()
 
-        const effectiveBatchTime = getMinSecWeakenTime(ns, bestTargetData.target) + DeltaShotgunExec + StartMargin
+        const effectiveBatchTime =
+            getMinSecWeakenTime(ns, bestTargetData.target)
+            + DeltaShotgunExec
+            + BatchStartMargin
+
         const maxForTime = (effectiveBatchTime / BatchTime) * 0.5  // margin of error  
 
         return maxForRam < maxForTime
@@ -823,7 +870,9 @@ export class EffectiveScheduler {
         const s = performance.now()
         await this.goToNextStart()
         const e = performance.now()
-        console.log(e - s)
+        // console.log(e - s)
+
+        // console.log([...this.shotgunThreadStarts])
 
         this.removeOldSecHoleData()
 
@@ -837,7 +886,8 @@ export class EffectiveScheduler {
             // took to much time
             // switch modes
 
-            throw new Error("took to much time")
+            // throw new Error("took to much time")
+            console.log("took to much time")
         }
 
         await this.startThreadsTo(this.lastShotgunStart + SleepAccuracy)
@@ -846,7 +896,8 @@ export class EffectiveScheduler {
             // took to much time
             // switch modes
 
-            throw new Error("took to much time")
+            // throw new Error("took to much time")
+            console.log("took to much time")
         }
     }
 }

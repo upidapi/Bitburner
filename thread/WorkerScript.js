@@ -55,14 +55,14 @@ export async function main(ns) {
         portHandle.write("worker failed")
     
     } else {
-        ns.print([
-            `target: ${target}`,
-            `type: ${type}`,
-            `threads: ${threads}`,
-            `duration: ${duration}`,
-            `execTime: ${execTime}`,
-            `aSec: ${aSec}`,
-        ].join("\n"))
+        // ns.print([
+        //     `target: ${target}`,
+        //     `type: ${type}`,
+        //     `threads: ${threads}`,
+        //     `duration: ${duration}`,
+        //     `execTime: ${execTime}`,
+        //     `aSec: ${aSec}`,
+        // ].join("\n"))
         
         const promise = func(target, {
             "additionalMsec": aSec,

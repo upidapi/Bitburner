@@ -3,7 +3,7 @@ import { getServers } from "Other/ScanServers"
 import { getHsbRamData } from "thread/Other"
 import { EffectiveScheduler } from "thread/Scheduling/Effective"
 import { SpeedScheduler } from "thread/Scheduling/Speed"
-import { getBestTarget, getTargetsData } from "thread/Targeting"
+import { TargetData, getBestTarget, getOptimalMoneyBatch, getTargetsData } from "thread/Targeting"
 import { compileWorker } from "thread/Worker"
 
 
@@ -17,6 +17,10 @@ async function setup(ns) {
 
     const speedScheduler = new SpeedScheduler(ns)
     const effectiveScheduler = new EffectiveScheduler(ns)
+
+    const targetData = getTargetsData(ns)
+    effectiveScheduler.targetsData = targetData
+    speedScheduler.targetsData = targetData
 
     return [speedScheduler, effectiveScheduler]
 }
@@ -34,20 +38,33 @@ async function update(ns,
     effectiveScheduler
 ) {
     await purchaseMaxServers(ns);
-
-    const targetData = getTargetsData(ns)
-    effectiveScheduler.targetsData = targetData
-    speedScheduler.targetsData = targetData
-
-    const bestTargetData = getBestTarget(ns, targetData)
-    effectiveScheduler.bestTargetData = bestTargetData
-    speedScheduler.bestTargetData = bestTargetData
+     
+    // console.log(getServers(ns))
 
     // we don't update the effectiveScheduler's ram data since it updates itself
     const [totalRam, hsbServersData, availableRam] = getHsbRamData(ns)
     speedScheduler.hsbServersData = hsbServersData
     speedScheduler.totalRam = totalRam
     speedScheduler.availableRam = availableRam
+
+    const targetsData = speedScheduler.targetsData
+    for (const targetData of targetsData) {
+        targetData.batch = getOptimalMoneyBatch(ns, targetData.target)
+    }
+
+    // let bestTargetData = undefined
+    // targetsData.forEach((x) => {
+    //     if (x.target == "phantasy") {
+    //         bestTargetData = x
+    //     }
+    // })
+    // if (bestTargetData == undefined) {
+    //     throw new Error("couldn't find the target")
+    // }
+
+    const bestTargetData = getBestTarget(ns, targetsData, totalRam)
+    effectiveScheduler.bestTargetData = bestTargetData
+    speedScheduler.bestTargetData = bestTargetData
 
     if (effectiveScheduler.shouldRun(totalRam)) {
         // using the effective batches is fine
@@ -58,8 +75,6 @@ async function update(ns,
             effectiveScheduler.reset()
         }
 
-        effectiveScheduler.bestTargetData = bestTargetData
-
         return "effective"
     } else {
         // the effective batcher will run into problems
@@ -67,9 +82,11 @@ async function update(ns,
         console.log(`speed - ${bestTargetData.target}`)
 
         if (curMode != "speed") {
+            // speedScheduler.reset()
+
             for (const serverData of speedScheduler.hsbServersData) {
                 const server = serverData.server
-                ns.kill("WorkerScript.js", server)
+                ns.scriptKill("WorkerScript.js", server)
             }
         }
 
@@ -171,3 +188,6 @@ export async function main(ns) {
         }
     }
 }
+
+
+// todo shit breaks (no more batches get started) if we switch targets

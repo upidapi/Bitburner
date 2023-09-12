@@ -1,8 +1,13 @@
-heckpointimport { nextValWrite } from "thread/Other"
+import { getMinSecWeakenTime } from "Helpers/MyFormulas"
+import { nextValWrite } from "thread/Other"
 import { safeSleepTo } from "thread/Scheduling/Helpers"
 import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, RamWaitTime, SleepAccuracy, SpeedStart } from "thread/Setings"
-import { TargetData, getBestFixBatch, getOptimalFixBatch } from "thread/Targeting"
+import { TargetData, getBestFixBatch, getBestTarget, getOptimalFixBatch } from "thread/Targeting"
 import { startWorker } from "thread/Worker"
+
+
+export const DeltaSleep = 50
+
 
 /**
  * pros:
@@ -22,10 +27,10 @@ export class SpeedScheduler {
 
         this.availableRam = 0
         this.totalRam = 0
-        this.hsbServersData = 0
+        this.hsbServersData = []
 
         // valid times to start new shotguns
-        this.batchExecs = []
+        this.lastSleep = 0
     }
 
     async startWorker(
@@ -46,17 +51,26 @@ export class SpeedScheduler {
                 )
             )
 
-        } catch (error) {
+        } 
+        catch (error) {
             // if the worker fails cancel all started workers in batch
-            for (const worker of batchWorkers) {
-                if (!this.ns.kill(worker)) {
+            for (const pData of batchWorkers) {
+                // console.log(pData)
+                if (!ns.kill(
+                    JSON.parse(pData[0]),
+                    pData[1]
+                )) {
                     // failed to kill worker
-
-                    throw new Error("failed to cancel worker")
+                    throw new Error(
+                        "couldn't find worker:\n" +
+                        `pid: ${pData[0]}\n` +
+                        `target: ${pData[1]}\n`
+                    )
                 }
             }
 
             console.log("batch failed")
+            console.log(error)
 
             return false
         }
@@ -64,14 +78,13 @@ export class SpeedScheduler {
         return true
     }
 
-
     /**
      * @param {TargetData} targetData 
      */
-    async startFullBatch(targetData) {
+    async startFullBatch(targetData, batch = null) {
         // const s = performance.now()
 
-        const batch = targetData.batch
+        batch = batch ?? targetData.batch
         const wRam = batch.wRam()
         const gRam = batch.gRam()
         const hRam = batch.hRam()
@@ -127,7 +140,6 @@ export class SpeedScheduler {
                 return
             }
 
-            this.batchExecs.push(execTime)
             this.availableRam -= wRam
 
         } else {
@@ -166,7 +178,7 @@ export class SpeedScheduler {
 
             if (targetData.execTime <= maxExec) {
                 if (!await this.startFullBatch(this.bestTargetData)) {
-                    break
+                    continue
                 }
 
                 startedBatch = true
@@ -178,24 +190,26 @@ export class SpeedScheduler {
         return startedBatch
     }
 
-    async startBatches() {
-        const ns = this.ns
+    // async startBatches() {
+    //     const ns = this.ns
 
-        // console.log(0)
-        await this.startTo(DeltaShotgunExec + performance.now())
+    //     const now = performance.now()
+    //     await safeSleepTo(ns, 5, this.bestTargetData, 5)
 
-        // console.log(1)
-        await safeSleepTo(ns, 0, this.bestTargetData, 10)
+    //     // console.log(DeltaShotgunExec + now - performance.now(), now - performance.now())
+    //     await this.startTo(DeltaShotgunExec + now)
 
-        const moneyPart = ns.getServerMoneyAvailable(this.bestTargetData.target)
-            / ns.getServerMaxMoney(this.bestTargetData.target) * 100
+    //     // console.log(1)
 
-        console.log(`
-        ram: ${this.availableRam / this.totalRam}
-        sec: ${ns.getServerSecurityLevel(this.bestTargetData.target)} / ${ns.getServerMinSecurityLevel(this.bestTargetData.target)}
-        money: ${moneyPart.toFixed(1)} %
-        `)
-    }
+    //     const moneyPart = ns.getServerMoneyAvailable(this.bestTargetData.target)
+    //         / ns.getServerMaxMoney(this.bestTargetData.target) * 100
+
+    //     // console.log(`
+    //     // ram: ${1 - this.availableRam / this.totalRam}
+    //     // sec: ${ns.getServerSecurityLevel(this.bestTargetData.target)} / ${ns.getServerMinSecurityLevel(this.bestTargetData.target)}
+    //     // money: ${moneyPart.toFixed(1)} %
+    //     // `)
+    // }
 
     // async startBatches() {
     //     const ns = this.ns
@@ -270,15 +284,6 @@ export class SpeedScheduler {
             return false
         }
 
-        const curMoney = ns.getServerMoneyAvailable(target)
-        const maxMoney = ns.getServerMaxMoney(target)
-
-        if (curMoney != maxMoney) {
-            // not yet fixed
-
-            return false
-        }
-
         return true
     }
 
@@ -286,100 +291,101 @@ export class SpeedScheduler {
         const ns = this.ns
 
         const targetData = this.bestTargetData
+
+        // console.log(Object.assign({}, targetData))
+
         const target = targetData.target
 
-        if (targetData.fixedStatus == "fixed") {
-            return
-        }
-
         if (this.isFixed(target)) {
-            targetData.fixedStatus = "fixed"
-            return
+            return true
         }
 
-        if (typeof targetData.fixedStatus == "number") {
+        if (SpeedStart) {
+            if (targetData.secAftFix == ns.getServerMinSecurityLevel(target)) {
+                return true
+            }
+        }
+
+        // console.log(targetData.fixComplete, targetData.fixComplete + BatchStartMargin - performance.now())
+        // if (targetData.fixComplete + BatchStartMargin > performance.now()) {
+        //     return false
+        // }
+
+        while (true) {
+            // if (targetData.fixComplete + SleepAccuracy < performance.now()) {
+            //     return false
+            // }
+
+            const optimalFixBatch = getOptimalFixBatch(ns, target)
+
+            let fixBatch = undefined
             while (true) {
-                const optimalFixBatch = getOptimalFixBatch(ns, target)
+                fixBatch = getBestFixBatch(ns, target, this.availableRam)
 
-                const fixBatchTargetData = new TargetData(ns, target)
+                if (fixBatch.weaken == 0) {
+                    // not enough ram for anything
 
-                while (true) {
-                    fixBatchTargetData.batch = getBestFixBatch(ns, target, this.availableRam)
-
-                    if (fixBatchTargetData.batch.weaken == 0) {
-                        // not enough ram for anything
-
-                        await ns.sleep(RamWaitTime)
-                        continue
-                    }
-
-                    // enough ram for something
-                    break
+                    await safeSleepTo(ns, 0, this.bestTargetData, 0)
                 }
 
-                const now = performance.now()
-
-                const wTime = ns.getWeakenTime(target)
-                const minExec = now + wTime + BatchStartMargin
-                fixBatchTargetData.execTime = Math.max(minExec,
-                    targetData.execTime + DeltaBatchExec)
-
-                const oldSec = ns.getServerSecurityLevel(target)
-                const oldMoney = ns.getServerMoneyAvailable(target)
-
-                await this.startFullBatch(fixBatchTargetData)
-
-                // if speed start is on we won't wait for the last batch 
-                // to complete 
-                if (SpeedStart) {
-                    if (optimalFixBatch.weaken == fixBatchTargetData.batch.weaken &&
-                        optimalFixBatch.grow == fixBatchTargetData.batch.grow &&
-                        optimalFixBatch.hack == fixBatchTargetData.batch.hack) {
-
-                        // best fix batch is optimal
-                        targetData.fixedStatus = fixBatchTargetData.execTime
-                        return
-                    }
-                }
-
-                await nextValWrite(ns,
-                    ns.pid,
-                    ["weaken worker finished"],
-                    fixBatchTargetData.execTime - now
-                )
-
-                //#region wait til the fix batch completes
-                while (true) {
-                    const curSec = ns.getServerSecurityLevel(target)
-                    const curMoney = ns.getServerMoneyAvailable(target)
-
-                    if (curSec < oldSec || curMoney > oldMoney) {
-                        // batch launched
-
-                        // the fix batch is always the fist batch launched on a
-                        // target. Unless the target is already prepped. Then there
-                        // won't be any fix batch
-                        break
-                    }
-
-                    await nextValWrite(ns,
-                        ns.pid,
-                        ["weaken worker finished"]
-                    )
-                }
-                //#endregion
-
-                if (!this.isFixed(target)) {
-                    continue
-                }
-
-                targetData.fixedStatus = "fixed"
-                return
+                // enough ram for something
+                break
             }
 
-        }
+            const now = performance.now()
 
-        throw new Error(`invalid fixedStatus (${targetData.fixedStatus})`)
+            const wTime = ns.getWeakenTime(target)
+            const minExec = now + wTime + BatchStartMargin
+            targetData.execTime = Math.max(
+                minExec,
+                targetData.execTime + DeltaBatchExec
+            )
+
+            await this.startFullBatch(targetData, fixBatch)
+
+            targetData.fixComplete = targetData.execTime
+            // console.log(targetData.fixComplete)
+
+            targetData.testAttr = "hello"
+
+            // if speed start is on we won't wait for the last batch 
+            // to complete 
+            if (SpeedStart) {
+                if (optimalFixBatch.weaken == fixBatch.weaken &&
+                    optimalFixBatch.grow == fixBatch.grow &&
+                    optimalFixBatch.hack == fixBatch.hack) {
+
+                    console.log("scheduled full fix batch")
+                    // best fix batch is optimal
+
+                    // the sec is set by the safeSleepTo()
+                    // targetData.security = ns.getServerMinSecurityLevel(target)
+
+                    targetData.secAftFix = ns.getServerMinSecurityLevel(target)
+                    return
+                }
+            }
+
+            console.log("scheduled sub fix batch")
+
+            const secDec =
+                ns.weakenAnalyze(optimalFixBatch.weaken)
+                - ns.growthAnalyzeSecurity(optimalFixBatch.grow)
+
+            targetData.secAftFix = targetData.security - secDec
+            targetData.security = targetData.secAftFix
+
+            // by manually decreasing the sec we force the safeSleepTo to wait 
+            // for the sec to go down to the val we set
+            await safeSleepTo(ns, 0, this.bestTargetData, targetData.execTime - performance.now())
+
+
+            if (!this.isFixed(target)) {
+                continue
+            }
+
+            return
+        }
     }
 
     async update() {
@@ -403,34 +409,52 @@ export class SpeedScheduler {
         console.log(this.bestTargetData)
     }
 
-    async run() {
-        let lastUpdate = -10000
-        while (true) {
-            if (performance.now() - lastUpdate >= 10000) {
-                console.log("update")
-                await this.update()
-                lastUpdate = performance.now()
-            }
+    // getMaxConcurrentBatches() {
+    //     const startPerMs = 1 / DeltaBatchExec
+    //     const batchTime =
+    //         getMinSecWeakenTime(ns, this.bestTargetData.target)
+    //         + DeltaBatchExec
+    //         + BatchStartMargin * 2
 
-            // this.bestTargetData = getBestTarget(ns, this.targetsData)
+    //     const maxConcurrentBatches = startPerMs * batchTime
+    //     return maxConcurrentBatches
+    // }
 
-            await this.fixIfNeeded()
-
-            // console.log("starting")
-            await this.startBatches()
-        }
-    }
 
     reset() {
-        this.batchExecs = []
+        this.lastSleep = 0
 
         this.availableRam = 0
+        this.totalRam = 0
         this.hsbServersData = []
     }
 
     async frame() {
-        await this.fixIfNeeded()
+        const ns = this.ns
 
-        await this.startBatches()
+        // console.log(DeltaShotgunExec + now - performance.now(), now - performance.now())
+
+        // console.log(0)
+        if (!await this.fixIfNeeded()) {
+            return
+        }
+
+        // we set "now" before the sleep to avoid lag  
+        // let now = performance.now()
+
+        await safeSleepTo(ns, 5, this.bestTargetData, 5)
+        await this.startTo(DeltaShotgunExec + performance.now())
+
+        // console.log(2)
+        // await this.startBatches()
+
+        // console.log(3)
+        let now = performance.now()
+        if (now - this.lastSleep >= DeltaSleep) {
+            this.lastSleep = now
+            // console.log("update")
+
+            await safeSleepTo(this.ns, 100, this.bestTargetData, 100)
+        }
     }
 }

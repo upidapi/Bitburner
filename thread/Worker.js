@@ -117,13 +117,15 @@ export async function startWorker(
                 `    successStatus: "${successStatus}"\n` +
                 `    target: "${target}"\n` +
                 `    type: "${type}"\n` +
-                `    threads: "${threads}"\n` +
-                `    duration: "${duration}"\n` +
-                `    execTime: "${batchExecTime}"\n` +
-                `    toExecTime: "${batchExecTime - now}"\n` +
-                `    now: "${now}"\n` +
-                `    startTime: "${batchExecTime - duration}"\n` +
-                `    toStart: "${batchExecTime - duration - now}"\n`
+                `    sec: ${ns.getServerSecurityLevel(target)}\n` +
+                `    min sec: ${ns.getServerMinSecurityLevel(target)}\n` +                
+                `    threads: ${handledThreads}\n` +
+                `    duration: ${duration}\n` +
+                `    execTime: ${batchExecTime}\n` +
+                `    toExecTime: ${batchExecTime - now}\n` +
+                `    now: ${now}\n` +
+                `    startTime: ${batchExecTime - duration}\n` +
+                `    toStart: ${batchExecTime - duration - now}\n`
             )
 
             // return false

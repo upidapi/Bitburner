@@ -2,10 +2,11 @@
 // on how many batches we can run (based on your cpu etc)
 
 // time we have to start a thread
+// at least 0.5ms
 export const DeltaThreadExec = 0.5
 
 // time we have to start a batch
-export const DeltaBatchExec = DeltaThreadExec * 3
+export const DeltaBatchExec = 15
 
 /**
  * time between thread execs 
@@ -24,7 +25,7 @@ export const DeltaBatchExec = DeltaThreadExec * 3
  */
 export const ThreadStartMargin = 5
 
-export const DeltaShotgunExec = 25
+export const DeltaShotgunExec = 50
 
 // the reason why it's so high is due to the GB 
 export const BatchStartMargin = 50

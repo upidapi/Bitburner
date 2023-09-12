@@ -81,7 +81,7 @@ export function deFormatGameNum(fNum) {
     }
 
     let num = parseFloat(sNum)
-    console.log(num, formatting)
+    // console.log(num, formatting)
     if (formatting == "") {
         return num
 
