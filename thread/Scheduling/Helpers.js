@@ -13,6 +13,26 @@ export function extendListTo(list, newLen, defaultValFunc) {
 }
 
 
+async function limitNextWrite(ns, ms, vals) {
+    const p1 = nextValWrite(ns,
+        ns.pid,
+        [vals]
+    )
+
+    const p2 = ns.asleep(ms)
+
+    const retVal = await Promise.race([
+        p1, p2
+    ])
+
+    if (retVal == true) {
+        p1.resolve()
+    } else {
+        p2.resolve()
+    }
+}
+
+
 /**
  * @param {NS} ns 
  * @param {Number} ms 
@@ -39,17 +59,15 @@ export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
 
 
     while (true) {
-        await Promise.race([
-            nextValWrite(ns,
-                ns.pid,
-                [
-                    "hack worker finished",
-                    "grow worker finished",
-                    "weaken worker finished",
-                ]
-            ),
-            ns.asleep(finishTime - performance.now())
-        ])
+        await limitNextWrite(
+            ns,
+            finishTime - performance.now(),
+            [
+                "hack worker finished",
+                "grow worker finished",
+                "weaken worker finished",
+            ]
+        )
 
         while (true) {
             const sec = ns.getServerSecurityLevel(targetData.target)
@@ -83,15 +101,14 @@ export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
 
             // error data/protection
             while (true) {
-                const retVal = await Promise.race([
-                    nextValWrite(ns,
-                        ns.pid,
-                        [
-                            "weaken worker finished",
-                        ]
-                    ),
-                    ns.asleep(1000)
-                ])
+                const retVal = await limitNextWrite(
+                    ns,
+                    finishTime - performance.now(),
+                    [
+                        "weaken worker finished",
+
+                    ]
+                )
 
                 if (retVal == true) {
                     console.log("waited for 1 sec for fix")

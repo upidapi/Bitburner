@@ -1,7 +1,7 @@
 import { getMinSecWeakenTime } from "Helpers/MyFormulas"
 import { nextValWrite } from "thread/Other"
 import { safeSleepTo } from "thread/Scheduling/Helpers"
-import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, RamWaitTime, SleepAccuracy, SpeedStart } from "thread/Setings"
+import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, MaxWorkers, RamWaitTime, SleepAccuracy, SpeedStart } from "thread/Setings"
 import { TargetData, getBestFixBatch, getBestTarget, getOptimalFixBatch } from "thread/Targeting"
 import { startWorker } from "thread/Worker"
 
@@ -31,6 +31,9 @@ export class SpeedScheduler {
 
         // valid times to start new shotguns
         this.lastSleep = 0
+
+        // used to limit the worker count to {MaxWorkers}
+        this.batchExecs = []
     }
 
     async startWorker(
@@ -39,9 +42,13 @@ export class SpeedScheduler {
         threads,
         execTime
     ) {
+        const ns = this.ns
+        
+        // basically the normal one but with error protection
+
         try {
-            batchWorkers.concat(
-                await startWorker(
+            batchWorkers.push(
+                ...await startWorker(
                     this.ns,
                     this.hsbServersData,
                     this.bestTargetData.target,
@@ -50,9 +57,12 @@ export class SpeedScheduler {
                     execTime
                 )
             )
-
         } 
         catch (error) {
+            
+            console.log("batch failed")
+            console.log(error)
+            
             // if the worker fails cancel all started workers in batch
             for (const pData of batchWorkers) {
                 // console.log(pData)
@@ -68,9 +78,6 @@ export class SpeedScheduler {
                     )
                 }
             }
-
-            console.log("batch failed")
-            console.log(error)
 
             return false
         }
@@ -97,6 +104,8 @@ export class SpeedScheduler {
         }
 
         const execTime = targetData.execTime
+
+        this.batchExecs.push(execTime)
 
         // the workers that we've already started
         const batchWorkers = []
@@ -429,6 +438,28 @@ export class SpeedScheduler {
         this.hsbServersData = []
     }
 
+    workerLimiter() {
+        const now = performance.now()
+
+        for (let i = 0; i < this.batchExecs.length; i++) {
+            const batchExec = this.batchExecs[i]
+
+            if (now > batchExec) {
+                this.batchExecs = this.batchExecs.slice(i)
+
+                break
+            }
+        }
+
+        const runningWorkers = this.batchExecs.length * 3
+        if (runningWorkers > MaxWorkers) {
+            return false
+        }
+
+        return true
+    }
+
+
     async frame() {
         const ns = this.ns
 
@@ -443,18 +474,24 @@ export class SpeedScheduler {
         // let now = performance.now()
 
         await safeSleepTo(ns, 5, this.bestTargetData, 5)
+
+        if (!this.workerLimiter()) {
+            console.log("limited workers")
+            return
+        }
+
         await this.startTo(DeltaShotgunExec + performance.now())
 
         // console.log(2)
         // await this.startBatches()
 
         // console.log(3)
-        let now = performance.now()
-        if (now - this.lastSleep >= DeltaSleep) {
-            this.lastSleep = now
-            // console.log("update")
+        // let now = performance.now()
+        // if (now - this.lastSleep >= DeltaSleep) {
+        //     this.lastSleep = now
+        //     // console.log("update")
 
-            await safeSleepTo(this.ns, 100, this.bestTargetData, 100)
-        }
+        //     await safeSleepTo(this.ns, 100, this.bestTargetData, 100)
+        // }
     }
 }

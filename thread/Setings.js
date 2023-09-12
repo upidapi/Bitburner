@@ -6,7 +6,7 @@
 export const DeltaThreadExec = 0.5
 
 // time we have to start a batch
-export const DeltaBatchExec = 15
+export const DeltaBatchExec = DeltaThreadExec * 3
 
 /**
  * time between thread execs 
@@ -58,3 +58,6 @@ export const smallNum = 0.0001
 export const MaxBatchScheduleTime = 5
 
 export const SpeedStart = true
+
+export const MaxWorkers = 400_000
+

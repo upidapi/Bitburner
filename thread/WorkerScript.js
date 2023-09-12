@@ -42,12 +42,13 @@ export async function main(ns) {
     const aSec = startTime - performance.now()
 
     if (aSec < 0) {
-        ns.print([
+        console.log([
             `target: ${target}`,
             `type: ${type}`,
             `threads: ${threads}`,
             `duration: ${duration}`,
             `execTime: ${execTime}`,
+            `startTime: ${startTime}`,
             `aSec: ${aSec}`,
         ].join("\n"))
 
