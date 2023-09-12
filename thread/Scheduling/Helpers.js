@@ -13,10 +13,15 @@ export function extendListTo(list, newLen, defaultValFunc) {
 }
 
 
+/**
+ * @param {NS} ns 
+ * @param {*} ms 
+ * @param {*} vals 
+ */
 async function limitNextWrite(ns, ms, vals) {
     const p1 = nextValWrite(ns,
         ns.pid,
-        [vals]
+        vals
     )
 
     const p2 = ns.asleep(ms)
@@ -25,10 +30,9 @@ async function limitNextWrite(ns, ms, vals) {
         p1, p2
     ])
 
-    if (retVal == true) {
-        p1.resolve()
-    } else {
-        p2.resolve()
+    if (retVal != true) {
+        const port = ns.getPortHandle(ns.pid)
+        port.write("resolve")
     }
 }
 
