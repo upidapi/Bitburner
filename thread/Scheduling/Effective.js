@@ -494,6 +494,8 @@ export class EffectiveScheduler {
         if (toNextShotgun > 0) {
             await safeSleepTo(ns, 0, this.bestTargetData, 1)
         }
+
+        // this.lastShotgunStart = performance.now()
     }
 
     getStaticRamAvailable(startTime, endTime) {
@@ -622,7 +624,7 @@ export class EffectiveScheduler {
         }
 
         // don't start multiple simultaneous fix batches 
-        if (targetData.fixComplete + SleepAccuracy < performance.now()) {
+        if (targetData.fixComplete + SleepAccuracy > performance.now()) {
             return false
         }
 
@@ -640,9 +642,17 @@ export class EffectiveScheduler {
         // console.log(availableRam)
 
         const fixBatchTargetData = targetData.copy(ns)
-        fixBatchTargetData.batch = getBestFixBatch(ns, target, availableRam)
+        const bestFixBatch = getBestFixBatch(ns, target, availableRam)
+        fixBatchTargetData.batch = bestFixBatch
 
-        if (fixBatchTargetData.batch.weaken == 0) {
+        console.log({
+            optimal: optimalFixBatch,
+            best: bestFixBatch
+        })
+
+        // TODO fix bug where the sec is not decreased as much as expected
+
+        if (bestFixBatch.weaken == 0) {
             // not enough ram for anything
 
             return false
@@ -663,17 +673,31 @@ export class EffectiveScheduler {
 
         targetData.fixComplete = fixBatchTargetData.execTime
 
-        targetData.execTime += DeltaBatchExec
+        console.log({
+            complete: targetData.fixComplete,
+            now: performance.now(),
+            wTime: ns.getWeakenTime(target)
+        })
+
+        const minSec = ns.getServerMinSecurityLevel(target)
+
+        const secDec =
+            ns.weakenAnalyze(bestFixBatch.weaken)
+            - ns.growthAnalyzeSecurity(bestFixBatch.grow)
+
+        targetData.secAftFix = Math.max(
+            targetData.security - secDec,
+            minSec
+        )
 
         // console.log([...this.shotgunRamUsage], this.hsbRam)
 
         // if speed start is on we won't wait for the last batch 
         // to complete 
-        if (optimalFixBatch.weaken == fixBatchTargetData.batch.weaken &&
-            optimalFixBatch.grow == fixBatchTargetData.batch.grow &&
-            optimalFixBatch.hack == fixBatchTargetData.batch.hack) {
+        if (optimalFixBatch.weaken == bestFixBatch.weaken &&
+            optimalFixBatch.grow == bestFixBatch.grow &&
+            optimalFixBatch.hack == bestFixBatch.hack) {
 
-            targetData.secAftFix = ns.getServerMinSecurityLevel(target)
             console.log("scheduled full fix")
 
             if (SpeedStart) {
@@ -682,24 +706,18 @@ export class EffectiveScheduler {
                 return true
 
             } else {
-                targetData.fixedStatus = fixBatchTargetData.execTime
-
                 // todo add a fix status for when the fix is not enough to fully prep the server
                 // probably by adding a .fixComplete
                 // to compliment the .fixStatus 
 
                 return false
             }
+
+        } else {
+
+            console.log("scheduled sub fix")
+            return false
         }
-
-        const secDec =
-            ns.weakenAnalyze(optimalFixBatch.weaken)
-            - ns.growthAnalyzeSecurity(optimalFixBatch.grow)
-
-        targetData.secAftFix = targetData.security - secDec
-
-        console.log("scheduled sub fix")
-        return false
     }
 
     scheduleNewBatches() {
@@ -716,7 +734,10 @@ export class EffectiveScheduler {
         const firstExec = this.lastShotgunStart + wTime + smallNum + DeltaShotgunExec
         // console.log(this.lastShotgunStart - now, targetData.execTime - now, firstExec - now)
 
-        targetData.execTime = Math.max(targetData.execTime, firstExec)
+        targetData.execTime = Math.max(
+            targetData.execTime + DeltaBatchExec,
+            firstExec
+        )
 
         // console.log(this.shotgunRamUsage)
 

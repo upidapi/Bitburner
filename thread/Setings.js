@@ -61,3 +61,5 @@ export const SpeedStart = true
 
 export const MaxWorkers = 400_000
 
+export const ThreadMargin = 1.05
+

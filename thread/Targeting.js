@@ -2,7 +2,7 @@ import { estimateX } from "Helpers/EstimateX"
 import { calcMinHackChance, getMinSecWeakenTime } from "Helpers/MyFormulas"
 import { getServers } from "Other/ScanServers"
 import { Batch } from "thread/Other"
-import { BatchStartMargin, DeltaBatchExec } from "thread/Setings"
+import { BatchStartMargin, DeltaBatchExec, ThreadMargin } from "thread/Setings"
 
 const RamUsage = {
     "hack": 1.70, // ns.getScriptRam("HybridShotgunBatcher/ThreadScripts/ThreadHack.js")
@@ -19,14 +19,14 @@ export function getBestMoneyBatch(ns, target, availableRam) {
         const neededMoneyIncD = 1 / (1 - moneyStolenD)
 
         batch.grow = ns.growthAnalyze(target, neededMoneyIncD)
-        batch.grow = Math.ceil(batch.grow)
+        batch.grow = Math.ceil(batch.grow * ThreadMargin)
 
         const secInc =
             ns.hackAnalyzeSecurity(batch.hack) +
             ns.growthAnalyzeSecurity(batch.grow)
 
         batch.weaken = secInc / ns.weakenAnalyze(1)
-        batch.weaken = Math.ceil(batch.weaken)
+        batch.weaken = Math.ceil(batch.weaken * ThreadMargin)
 
         return batch.ramUsage()
     }
@@ -184,8 +184,8 @@ export class TargetData {
         this.target = target
         this.execTime = performance.now()
         this.batch = getOptimalMoneyBatch(ns, target)
-        
-        this.fixComplete = 0 
+
+        this.fixComplete = 0
         this.secAftFix = ns.getServerSecurityLevel(target)
         this.security = ns.getServerSecurityLevel(target)
     }
@@ -308,13 +308,11 @@ export function getBestTarget(ns, targetsData, totalRam) {
         const maxConcurrentBatches = startPerMs * batchTime / 4
         const maxBatchesTime = maxConcurrentBatches
 
-        const maxBatches = Math.floor(
-            Math.min(
-                maxBatchesRam,
-                maxBatchesTime
-            )
+        const maxBatches = Math.min(
+            maxBatchesRam,
+            maxBatchesTime
         )
-            
+
         const moneyPerMs = moneyPerMsPerBatch * maxBatches
         // console.log(targetData, maxBatchesRam, maxBatchesTime, moneyPerMs)
 

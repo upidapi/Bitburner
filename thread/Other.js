@@ -71,7 +71,7 @@ export class Batch {
  * thing(s) to wait for 
  * @param {Array<String | Number> | String | Number} vals
  */
-export async function nextValWrite(ns, portNum, vals, first = -1) {
+export async function nextValWrite(ns, portNum, vals) {
     if (!typeof vals == "array") {
         vals = [vals]
     }
@@ -82,7 +82,7 @@ export async function nextValWrite(ns, portNum, vals, first = -1) {
     // }
 
     const portHandle = ns.getPortHandle(portNum)
-    portHandle.clear()
+    // portHandle.clear()
 
     // if (!portHandle.empty()) {
     //     // unhandled val in port 
@@ -94,16 +94,28 @@ export async function nextValWrite(ns, portNum, vals, first = -1) {
     //         `port first elem: ${portHandle.read()}`)
     // }
 
+    
+    if (!portHandle.empty()) {
+        const data = []
+
+        while (!portHandle.empty()) {
+            data.push(portHandle.read())
+        }
+
+        throw new Error(`port isn't empty, data: ${data}`)
+    }
+    
     while (true) {
         await portHandle.nextWrite()
-        const val = portHandle.read()
+        const val = portHandle.peek()
+
         // console.log(val)
 
         if (vals.includes(val)) {
+            portHandle.read()
 
-            if (first <= performance.now()) {
-                return val
-            }
+            // portHandle.write("test")
+            return val
         }
     }
 }

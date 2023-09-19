@@ -4,22 +4,22 @@ backdoor
 BitRunners
     => run4theh111z
 
-    connect home;connect joesguns;connect nectar-net;connect omega-net;connect johnson-ortho;connect rothman-uni;connect lexo-corp;connect snap-fitness;connect unitalife;connect solaris;connect taiyang-digital;connect run4theh111z; backdoor
+    connect home;connect harakiri-sushi;connect zer0;connect omega-net;connect crush-fitness;connect catalyst;connect rho-construction;connect snap-fitness;connect deltaone;connect icarus;connect taiyang-digital;connect run4theh111z; backdoor
 
 CyberSec
     => CSEC
 
-    connect home;connect hong-fang-tea;connect CSEC; backdoor
+    connect home;connect foodnstuff;connect CSEC; backdoor
 
 Black Hand
     => I.I.I.I
 
-    connect home;connect joesguns;connect nectar-net;connect omega-net;connect the-hub;connect I.I.I.I; backdoor
+    connect home;connect harakiri-sushi;connect zer0;connect omega-net;connect crush-fitness;connect I.I.I.I; backdoor
 
 NiteSec
     => avmnite-02h
 
-    connect home;connect joesguns;connect nectar-net;connect omega-net;connect avmnite-02h; backdoor
+    connect home;connect foodnstuff;connect CSEC;connect phantasy;connect avmnite-02h; backdoor
 
 
 

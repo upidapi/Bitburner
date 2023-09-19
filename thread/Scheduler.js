@@ -85,6 +85,9 @@ async function setup(ns) {
 
     // margins
     // effectiveScheduler.batchTime = effectiveBatchStartTime * 100
+    
+    // todo possibly decrease this by a lot
+    // i set this when i hade a huge performance affecting bug
     effectiveScheduler.batchTime = 200
 
     return [speedScheduler, effectiveScheduler, effectiveBatchStartTime]
@@ -193,6 +196,3 @@ export async function main(ns) {
 }
 
 // TODO add calculations for hack %
-
-// TODO separate ThreadStartMargin and DeltaThreadExec
-// btw ThreadStartMargin = DeltaBatchExec / 3

@@ -1053,6 +1053,3 @@ export async function main(ns) {
         // console.log(batchScheduler.secHoleThreadStarts.copy())
     }
 }
-
-
-// TODO switch to performance.now() (from performance.now())

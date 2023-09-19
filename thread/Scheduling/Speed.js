@@ -1,8 +1,6 @@
-import { getMinSecWeakenTime } from "Helpers/MyFormulas"
-import { nextValWrite } from "thread/Other"
 import { safeSleepTo } from "thread/Scheduling/Helpers"
 import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, MaxWorkers, RamWaitTime, SleepAccuracy, SpeedStart } from "thread/Setings"
-import { TargetData, getBestFixBatch, getBestTarget, getOptimalFixBatch } from "thread/Targeting"
+import { TargetData, getBestFixBatch, getBestTarget, getOptimalFixBatch, getOptimalMoneyBatch } from "thread/Targeting"
 import { startWorker } from "thread/Worker"
 
 
@@ -20,6 +18,9 @@ export const DeltaSleep = 50
  * - shotgun based 
  */
 export class SpeedScheduler {
+    /**
+     * @param {NS} ns 
+     */
     constructor(ns) {
         this.ns = ns
 
@@ -34,7 +35,42 @@ export class SpeedScheduler {
 
         // used to limit the worker count to {MaxWorkers}
         this.batchExecs = []
+
+        this.intLvl = 0
+        this.hackLvl = 0
     }
+
+    updateBatch() {
+        // this is for accounting for potential changes in the conditions
+        // if the conditions change the batch goes out of balance
+        // this can result in there being no money on the server
+
+        // conditions, for example: int lvl, hack lvl
+
+        const ns = this.ns
+        const player = ns.getPlayer()
+
+        const curHackLvc = player.skills.hacking
+        const curIntLvc = player.skills.intelligence
+
+        if (curHackLvc == this.hackLvl &&
+            curIntLvc == this.intLvl) {
+
+            // no conditions changed
+
+            return
+        }
+
+        this.hackLvl = curHackLvc
+        this.intLvl = curIntLvc
+
+        ns.print("conditions changed")
+
+        const targetData = this.bestTargetData
+
+        targetData.batch = getOptimalMoneyBatch(ns, targetData.target)
+    }
+
 
     async startWorker(
         batchWorkers,
@@ -43,26 +79,23 @@ export class SpeedScheduler {
         execTime
     ) {
         const ns = this.ns
-        
+
         // basically the normal one but with error protection
 
-        try {
-            batchWorkers.push(
-                ...await startWorker(
-                    this.ns,
-                    this.hsbServersData,
-                    this.bestTargetData.target,
-                    type,
-                    threads,
-                    execTime
-                )
-            )
-        } 
-        catch (error) {
-            
+        const [success, pIds] = await startWorker(
+            this.ns,
+            this.hsbServersData,
+            this.bestTargetData.target,
+            type,
+            threads,
+            execTime
+        )
+
+        batchWorkers.push(...pIds)
+
+        if (!success) {
             console.log("batch failed")
-            console.log(error)
-            
+
             // if the worker fails cancel all started workers in batch
             for (const pData of batchWorkers) {
                 // console.log(pData)
@@ -91,6 +124,12 @@ export class SpeedScheduler {
     async startFullBatch(targetData, batch = null) {
         // const s = performance.now()
 
+        const customBatch = batch ? true : false
+
+        // console.log(`custom batch ${customBatch}`, batch)
+
+        if (!customBatch) this.updateBatch()
+
         batch = batch ?? targetData.batch
         const wRam = batch.wRam()
         const gRam = batch.gRam()
@@ -112,41 +151,45 @@ export class SpeedScheduler {
 
         const gThreads = targetData.batch.grow
         if (gThreads != 0) {
-            if (!this.startWorker(
+            if (!await this.startWorker(
                 batchWorkers,
                 "grow",
                 gThreads,
                 execTime - DeltaThreadExec * 2
             )) {
-                return
+                return false
             }
 
             this.availableRam -= gRam
         }
 
+        if (!customBatch) this.updateBatch()
+
         const hThreads = targetData.batch.hack
         if (hThreads != 0) {
-            if (!this.startWorker(
+            if (!await this.startWorker(
                 batchWorkers,
                 "hack",
                 hThreads,
                 execTime - DeltaThreadExec * 1
             )) {
-                return
+                return false
             }
 
             this.availableRam -= hRam
         }
 
+        if (!customBatch) this.updateBatch()
+
         const wThreads = targetData.batch.weaken
         if (wThreads != 0) {
-            if (!this.startWorker(
+            if (!await this.startWorker(
                 batchWorkers,
                 "weaken",
                 wThreads,
                 execTime - DeltaThreadExec * 0
             )) {
-                return
+                return false
             }
 
             this.availableRam -= wRam
@@ -167,6 +210,8 @@ export class SpeedScheduler {
         const targetData = this.bestTargetData
         const target = targetData.target
 
+        const lastExec = targetData.execTime
+
         let startedBatch = false
         while (true) {
 
@@ -180,8 +225,10 @@ export class SpeedScheduler {
             // const maxExec = now + wTime + DeltaShotgunExec * 2 + BatchStartMargin
             const maxExec = lastStart + wTime + BatchStartMargin + DeltaBatchExec
 
-            targetData.execTime = Math.max(minExec,
-                targetData.execTime + DeltaBatchExec)
+            targetData.execTime = Math.max(
+                targetData.execTime + DeltaBatchExec,
+                minExec,
+            )
 
             // maybe add DeltaBatchExec to targetData.execTime
 
@@ -194,6 +241,11 @@ export class SpeedScheduler {
             } else {
                 break
             }
+        }
+
+        // don't change the execTime if no batches were started
+        if (!startedBatch) {
+            targetData.execTime = lastExec
         }
 
         return startedBatch
@@ -346,8 +398,8 @@ export class SpeedScheduler {
             const wTime = ns.getWeakenTime(target)
             const minExec = now + wTime + BatchStartMargin
             targetData.execTime = Math.max(
+                targetData.execTime + DeltaBatchExec,
                 minExec,
-                targetData.execTime + DeltaBatchExec
             )
 
             await this.startFullBatch(targetData, fixBatch)
@@ -355,34 +407,37 @@ export class SpeedScheduler {
             targetData.fixComplete = targetData.execTime
             // console.log(targetData.fixComplete)
 
-            targetData.testAttr = "hello"
+            const minSec = ns.getServerMinSecurityLevel(target)
+
+            const secDec =
+                ns.weakenAnalyze(fixBatch.weaken)
+                - ns.growthAnalyzeSecurity(fixBatch.grow)
+
+            targetData.secAftFix = Math.max(
+                targetData.security - secDec,
+                minSec
+            )
 
             // if speed start is on we won't wait for the last batch 
             // to complete 
-            if (SpeedStart) {
-                if (optimalFixBatch.weaken == fixBatch.weaken &&
-                    optimalFixBatch.grow == fixBatch.grow &&
-                    optimalFixBatch.hack == fixBatch.hack) {
+            if (optimalFixBatch.weaken == fixBatch.weaken &&
+                optimalFixBatch.grow == fixBatch.grow &&
+                optimalFixBatch.hack == fixBatch.hack) {
 
-                    console.log("scheduled full fix batch")
-                    // best fix batch is optimal
+                console.log("scheduled full fix batch")
+                // best fix batch is optimal
 
-                    // the sec is set by the safeSleepTo()
-                    // targetData.security = ns.getServerMinSecurityLevel(target)
+                // the sec is set by the safeSleepTo()
+                // targetData.security = ns.getServerMinSecurityLevel(target)
 
-                    targetData.secAftFix = ns.getServerMinSecurityLevel(target)
+                if (SpeedStart) {
+                    console.log("started batching before the target is prepped since speed start is on")
+
                     return
                 }
             }
 
             console.log("scheduled sub fix batch")
-
-            const secDec =
-                ns.weakenAnalyze(optimalFixBatch.weaken)
-                - ns.growthAnalyzeSecurity(optimalFixBatch.grow)
-
-            targetData.secAftFix = targetData.security - secDec
-            targetData.security = targetData.secAftFix
 
             // by manually decreasing the sec we force the safeSleepTo to wait 
             // for the sec to go down to the val we set
@@ -393,6 +448,8 @@ export class SpeedScheduler {
                 continue
             }
 
+            console.log("started batching because target is prepped")
+            
             return
         }
     }
@@ -459,7 +516,6 @@ export class SpeedScheduler {
         return true
     }
 
-
     async frame() {
         const ns = this.ns
 
@@ -475,12 +531,14 @@ export class SpeedScheduler {
 
         await safeSleepTo(ns, 5, this.bestTargetData, 5)
 
-        if (!this.workerLimiter()) {
-            console.log("limited workers")
-            return
-        }
+        // if (!this.workerLimiter()) {
+        //     console.log("limited workers")
+        //     return
+        // }
 
-        await this.startTo(DeltaShotgunExec + performance.now())
+        this.updateBatch()
+
+        await this.startTo(performance.now() + DeltaShotgunExec)
 
         // console.log(2)
         // await this.startBatches()
@@ -495,3 +553,6 @@ export class SpeedScheduler {
         // }
     }
 }
+
+
+// TODO things sometimes break when witching targets 

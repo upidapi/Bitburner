@@ -438,7 +438,3 @@ export function startShotgun(ns, nBatches) {
 
     return batches
 }
-
-
-
-// TODO precalc everything before the low sec hole starts 

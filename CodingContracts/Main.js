@@ -238,14 +238,12 @@ export function solveContracts(ns, logToTerminal = false) {
         }
 
         if (rewardData.type == "faction reputation") {
-            for (let factions of rewardData.factions) {
-                for (const faction of factions) {
-                    if (rewards["faction reputation"][faction] == undefined) {
-                        rewards["faction reputation"][faction] = 0
-                    }
-    
-                    rewards["faction reputation"][faction] += rewardData.amount   
+            for (const faction of rewardData.factions) {
+                if (rewards["faction reputation"][faction] == undefined) {
+                    rewards["faction reputation"][faction] = 0
                 }
+
+                rewards["faction reputation"][faction] += rewardData.amount
             }
         }
 

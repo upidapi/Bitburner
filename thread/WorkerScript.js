@@ -21,15 +21,17 @@ export async function main(ns) {
         return
     }
 
-    const target = args[1]
-    const type = args[2]
+    const [_, target, type, threads, duration, execTime, portNum] = args
+    // const target = args[1]
+    // const type = args[2]
 
-    const threads = args[3]
+    // const threads = args[3]
 
-    const duration = args[4]
-    const execTime = args[5]
+    // const duration = args[4]
+    // const execTime = args[5]
 
-    const portNum = args[6]
+    // const portNum = args[6]
+    
     const portHandle = ns.getPortHandle(portNum)
 
     const func = {

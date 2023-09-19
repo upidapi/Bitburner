@@ -59,7 +59,7 @@ export async function startWorker(
 
     for (const serverData of serversData) {
         if (threads == 0) {
-            return pIds
+            return [true, pIds]
         }
 
         const aRam = serverData.ram - serverData.usedRam
@@ -107,12 +107,15 @@ export async function startWorker(
             ]
         )
 
+        ns.print(successStatus)
+        // console.log(successStatus)
+
         if (successStatus == "started worker") {
             // return true
 
         } else if (successStatus == "worker failed") {
             const now = performance.now()
-            throw new Error(
+            console.log(
                 `failed to start worker, can't start worker in the past\n` +
                 `    successStatus: "${successStatus}"\n` +
                 `    target: "${target}"\n` +
@@ -128,14 +131,14 @@ export async function startWorker(
                 `    toStart: ${batchExecTime - duration - now}\n`
             )
 
-            // return false
+            return [false, pIds]
         } else {
             throw new Error(`invalid worker successStatus ("${successStatus}")`)
         }
     }
 
     if (threads == 0) {
-        return pIds
+        return [true, pIds]
     }
 
     console.log(getHsbRamData(ns))
@@ -163,7 +166,7 @@ export async function compileWorker(ns) {
      * process is run asynchronously and the script will 
      * therefor not start when we call "ns.run".
      * 
-     * the compile will only start once we await "ns.sleep()""
+     * the compile will only start once we await "ns.sleep()"
      * so when we instead await "port.nextWrite" it will 
      * get stuck.
      */

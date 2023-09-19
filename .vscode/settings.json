@@ -17,17 +17,19 @@
         "codingcontract",
         "endregion",
         "ftpcrack",
+        "harakiri",
         "httpworm",
         "killall",
         "mults",
+        "n00dles",
         "octo",
         "padd",
         "Prio",
         "spiralize",
         "sqlinject",
+        "targeter",
         "tprintf",
         "vals",
-        "Vigenère",
-        "n00dles"
+        "Vigenère"
     ],
 }

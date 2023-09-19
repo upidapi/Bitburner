@@ -1,5 +1,5 @@
 import { nextValWrite } from "thread/Other"
-import { DeltaThreadExec } from "thread/Setings"
+import { DeltaBatchExec, DeltaThreadExec } from "thread/Setings"
 import { TargetData } from "thread/Targeting"
 
 export function extendListTo(list, newLen, defaultValFunc) {
@@ -19,9 +19,13 @@ export function extendListTo(list, newLen, defaultValFunc) {
  * @param {*} vals 
  */
 async function limitNextWrite(ns, ms, vals) {
+    const port = ns.getPortHandle(ns.pid)
+
+    port.peek()
+    
     const p1 = nextValWrite(ns,
         ns.pid,
-        vals
+        [...vals, "resolve"]
     )
 
     const p2 = ns.asleep(ms)
@@ -30,10 +34,13 @@ async function limitNextWrite(ns, ms, vals) {
         p1, p2
     ])
 
-    if (retVal != true) {
+    if (retVal == true) {
         const port = ns.getPortHandle(ns.pid)
         port.write("resolve")
     }
+
+    port.peek()
+    return retVal
 }
 
 
@@ -76,6 +83,13 @@ export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
         while (true) {
             const sec = ns.getServerSecurityLevel(targetData.target)
 
+            // console.log({
+            //     sec: sec,
+            //     expected: targetData.security,
+            //     future: targetData.secAftFix,
+            //     toChange: targetData.fixComplete - performance.now()
+            // })
+
             if (performance.now() >= targetData.fixComplete) {
                 targetData.security = targetData.secAftFix
             }
@@ -84,8 +98,10 @@ export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
                 // we have complected all of the threads of the batch
 
                 if (performance.now() > minFinishTime) {
-                    console.log("finish")
-                    return
+                    // console.log("finish")
+                    ns.print("finish")
+
+                    return true
                 }
 
                 // console.log("wait", minFinishTime -  performance.now())
@@ -101,27 +117,61 @@ export async function safeSleepTo(ns, ms, targetData, minMs = 0) {
             //     targetData.fixComplete - performance.now(),
             //     targetData.fixComplete)
 
-            const s = performance.now()
+            // const s = performance.now()
 
-            // error data/protection
+            // wait for sec decrease
+
+            const maxCycles = Math.ceil(
+                Math.max(
+                    DeltaBatchExec * 100,
+                    10000
+                ) / 1000    
+            )
+            
+            let cycles = 0
+
             while (true) {
+                if (cycles == maxCycles) {
+                    // gave up on waiting for a fix
+
+                    console.log("gave up on waiting for fix")
+
+                    console.log({
+                        sec: ns.getServerSecurityLevel(targetData.target),
+                        expected: targetData.security,
+                        future: targetData.secAftFix,
+                        toChange: targetData.fixComplete - performance.now()
+                    })
+
+                    // reset the stored sec to force another fix batch
+                    targetData.security = ns.getServerSecurityLevel(targetData.target)
+                    targetData.secAftFix = targetData.security
+
+                    return false
+                }
+
                 const retVal = await limitNextWrite(
                     ns,
-                    finishTime - performance.now(),
+                    1000,
                     [
+                        "hack worker finished",
+                        "grow worker finished",
                         "weaken worker finished",
-
                     ]
                 )
+                
+                if (retVal == "weaken worker finished") {
+                    break
+                }
 
                 if (retVal == true) {
                     console.log("waited for 1 sec for fix")
-                } else {
-                    break
                 }
+
+                cycles++
             }
 
-            const e = performance.now()
+            // const e = performance.now()
             // console.log(`captured worker, ${(e - s).toFixed(1)}`)
         }
     }

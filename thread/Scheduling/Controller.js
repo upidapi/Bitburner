@@ -54,7 +54,7 @@ async function update(ns,
 
     // let bestTargetData = undefined
     // targetsData.forEach((x) => {
-    //     if (x.target == "phantasy") {
+    //     if (x.target == "harakiri-sushi") {
     //         bestTargetData = x
     //     }
     // })

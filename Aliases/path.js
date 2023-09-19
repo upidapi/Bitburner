@@ -2,60 +2,64 @@ import { getServersDepth } from "Other/ScanServers.js"
 
 
 /** @param {NS} ns */
-export function get_path(ns, target, servers = null, start_server = null) {
-    if (start_server === null) {
-        start_server = "home"
+export function get_path(ns, target, no_backdoor = false) {
+    let start_server = "home"
+
+    var path = [target]
+
+    const serversData = getServersDepth(ns, start_server)
+
+    let curDepth
+    let curServer = target
+
+    for (const [serverName, serverDepth] of serversData) {
+        if (serverName == target) {
+            curDepth = serverDepth
+            break
+        }
     }
 
-    var path = []
-
-    if (servers === null) {
-        servers = getServersDepth(ns, start_server)
-    } else if (servers[0] != [start_server, 0]) {
-        throw new Error("args servers has an invallid structure")
+    if (curDepth == undefined) {
+        throw new Error(`couldn't find server: ${target}`)
     }
 
-    // ns.tprint(servers)
+    Main: while (true) {
+        if (curDepth == 0) {
+            break Main
+        }
 
-    for (let i = 0; i < servers.length; i++) {
-        var server = servers[i]
-
-        if (server[0] == target) {
-            var depth = server[1] + 1
-
-            for (let j = i; j > -1; j--) {
-                var server = servers[j]
-
-                if (depth == 0) {
-                    break
-                }
-
-                // first progress back
-                if (server[1] == depth - 1) {
-                    depth--
-                    path.unshift(server[0])
-
-                    if (ns.getServer(server[0]).backdoorInstalled) {
-                        break
-                    }
-                }
+        if (!no_backdoor) {
+            if (ns.getServer(curServer).backdoorInstalled) {
+                break Main
             }
+        }
+        
+        for (const [serverName, serverDepth] of serversData) {
+            if (serverDepth != curDepth - 1) {
+                continue
+            }
+
+            if (!ns.scan(curServer).includes(serverName)) {
+                continue
+            }
+
+            path.unshift(serverName)
+            curServer = serverName
+            curDepth--
 
             break
         }
     }
 
-    // path connecf fotmatt =>
-    // connect {server_name};connect {server_name} 
     return "connect " + path.join(";connect ")
 }
 
 
 /** @param {NS} ns */
-export async function main(ns) {
+export async function main(ns, no_backdoor) {
     var target = ns.args[0]
 
-    var path = get_path(ns, target)
+    var path = get_path(ns, target, no_backdoor)
 
     // makes everything automatic (needs 35gb ram tho and prob some late game thing)
     // for (let i = 0; i < path.length; i++) {
@@ -67,6 +71,6 @@ export async function main(ns) {
 }
 
 
-export function autocomplete(data, args) {
+export function autocomplete(data, _) {
     return data.servers
 }

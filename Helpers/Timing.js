@@ -68,7 +68,7 @@ export async function timeFunction(func, MinDiff=1000) {
             continue
         }
 
-        // console.log((diff / loops).toFixed(20).replace(/\.?0+$/, ""), diff, loops)
+        console.log((diff / loops).toFixed(20).replace(/\.?0+$/, ""), diff, loops)
 
         return diff / loops
     }
