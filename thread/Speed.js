@@ -1,5 +1,5 @@
-import { safeSleepTo } from "thread/Scheduling/Helpers"
-import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, MaxWorkers, RamWaitTime, SleepAccuracy, SpeedStart } from "thread/Setings"
+import { safeSleepTo } from "thread/Helpers"
+import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, MaxWorkers, RamWaitTime, SleepAccuracy, SpeedStart } from "thread/Settings"
 import { TargetData, getBestFixBatch, getBestTarget, getOptimalFixBatch, getOptimalMoneyBatch } from "thread/Targeting"
 import { startWorker } from "thread/Worker"
 

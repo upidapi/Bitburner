@@ -1,8 +1,43 @@
-you run the script by running "thread/Scheduling/Controller.js"
+you run the script by running "thread/Controller.js"
 
-is has auto everything so you shouldn't have to do anything 
-    except the things that require singularity
-    like for example buying / creating the port openers
+
+is has auto everything so you (almost) shouldn't have to do anything 
+
+
+to run this you need the following folders / files:
+    thread/
+        (all files and folders in the "thread") folder
+
+    Other/ScanServers.js
+    Other/PurchaseServers
+
+
+
+This a a autonomous hybrid batcher 
+    it consists of the following:
+
+        an auto targeter / batch calculator
+            finds the optimal target
+            calculates the optimal batch for said target an ram
+
+        a jit batcher
+            very effective (ram) but instable and a bit slow
+
+        a continuous shotgun batcher
+            very fast, stable but ram ineffective
+
+        a server upgrader
+            upgrades and purchase personal servers   
+
+        a controller
+            well it controls everything
+
+
+    what it can't do:
+
+        things that require singularity
+            for example buying / creating the port openers
+
 
 if you want to you could add:
     calculations for hack %
@@ -19,4 +54,4 @@ if you want to you could add:
         not what to use that server for a very long time so the total money
         per sec over the servers "use time" is worse than other options 
         
-        An interesting challenge for those whom hate themselves
+        An interesting challenge for those whom hate themselves 

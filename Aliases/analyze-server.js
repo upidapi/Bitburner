@@ -1,5 +1,5 @@
 import { formatNum } from "Helpers/Formatting"
-import { getMinSecWeakenTime } from "Helpers/MyFormulas"
+import { getMinSecWeakenTime } from "thread/MyFormulas"
 
 /** @param {NS} ns */
 export async function main(ns) {

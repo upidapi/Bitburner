@@ -8,7 +8,7 @@ import { formatNum } from "Helpers/Formatting"
 
 import { getRoot } from "HybridShotgunBatcher/SetupServer"
 
-import { getMinSecWeakenTime } from "Helpers/MyFormulas.js"
+import { getMinSecWeakenTime } from "thread/MyFormulas.js"
 import { getMaxAvailableRam } from "HybridShotgunBatcher/Helpers"
 
 /** @param {NS} ns */

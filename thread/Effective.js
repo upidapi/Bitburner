@@ -1,7 +1,7 @@
-import { getMinSecWeakenTime } from "Helpers/MyFormulas"
+import { getMinSecWeakenTime } from "thread/MyFormulas"
 import { getHsbRamData } from "thread/Other"
-import { ScheduleData, extendListTo, safeSleepTo } from "thread/Scheduling/Helpers"
-import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, SleepAccuracy, SpeedStart, ThreadStartMargin, smallNum } from "thread/Setings"
+import { ScheduleData, extendListTo, safeSleepTo } from "thread/Helpers"
+import { BatchStartMargin, DeltaBatchExec, DeltaShotgunExec, DeltaThreadExec, SleepAccuracy, SpeedStart, ThreadStartMargin, smallNum } from "thread/Settings"
 import { getBestFixBatch, getBestMoneyBatch, getOptimalFixBatch } from "thread/Targeting"
 import { startWorker } from "thread/Worker"
 

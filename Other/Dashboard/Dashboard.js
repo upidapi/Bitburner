@@ -51,7 +51,7 @@ const colorMap = {
     "lowSec": [0, 255, 0],
 }
 
-import { WGHData, BatchData, ShotgunData, LogEntry } from "HybridShotgunBatcher/Dashboard/DataClasses";
+import { WGHData, BatchData, ShotgunData, LogEntry } from "Other/Dashboard/DataClasses";
 
 class Drawer {
     constructor(p5, guiData) {
@@ -314,7 +314,7 @@ class Drawer {
     }
 }
 
-import { strToLog } from "HybridShotgunBatcher/Dashboard/DataClasses";
+import { strToLog } from "Other/Dashboard/DataClasses";
 
 function getNewLogs(portHandle) {
     let portData = []
@@ -333,8 +333,8 @@ function getNewLogs(portHandle) {
     return portData
 }
 
-import { getMinSecWeakenTime } from "Helpers/MyFormulas"
-import { getP5 } from "HybridShotgunBatcher/Dashboard/p5Helpers"
+import { getMinSecWeakenTime } from "thread/MyFormulas"
+import { getP5 } from "Other/Dashboard/p5Helpers"
 
 class GuiData {
     constructor(ns, p5) {

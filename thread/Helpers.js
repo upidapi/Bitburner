@@ -1,5 +1,5 @@
 import { nextValWrite } from "thread/Other"
-import { DeltaBatchExec, DeltaThreadExec } from "thread/Setings"
+import { DeltaBatchExec, DeltaThreadExec } from "thread/Settings"
 import { TargetData } from "thread/Targeting"
 
 export function extendListTo(list, newLen, defaultValFunc) {

@@ -29,6 +29,7 @@
         "sqlinject",
         "targeter",
         "tprintf",
+        "upgrader",
         "vals",
         "Vigenère"
     ],

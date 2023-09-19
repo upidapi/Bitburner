@@ -267,8 +267,8 @@ export function solveContracts(ns, logToTerminal = false) {
         "",
         "faction reputation gain:")
 
-    for (let factions in rewards["faction reputation"]) {
-        resultList.push(`  ${factions.join(", ")}: ${rewards["faction reputation"][faction]}`)
+    for (let faction in rewards["faction reputation"]) {
+        resultList.push(`  ${faction}: ${rewards["faction reputation"][faction]}`)
     }
 
     resultList.push(

@@ -1,9 +1,9 @@
 import { purchaseMaxServers } from "Other/PurchaseServers"
 import { getServers } from "Other/ScanServers"
 import { getHsbRamData } from "thread/Other"
-import { EffectiveScheduler } from "thread/Scheduling/Effective"
-import { SpeedScheduler } from "thread/Scheduling/Speed"
-import { TargetData, getBestTarget, getOptimalMoneyBatch, getTargetsData } from "thread/Targeting"
+import { EffectiveScheduler } from "thread/Effective"
+import { SpeedScheduler } from "thread/Speed"
+import { getBestTarget, getOptimalMoneyBatch, getTargetsData } from "thread/Targeting"
 import { compileWorker } from "thread/Worker"
 
 

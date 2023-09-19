@@ -1,8 +1,8 @@
 import { estimateX } from "Helpers/EstimateX"
-import { calcMinHackChance, getMinSecWeakenTime } from "Helpers/MyFormulas"
+import { calcMinHackChance, getMinSecWeakenTime } from "thread/MyFormulas"
 import { getServers } from "Other/ScanServers"
 import { Batch } from "thread/Other"
-import { BatchStartMargin, DeltaBatchExec, ThreadMargin } from "thread/Setings"
+import { BatchStartMargin, DeltaBatchExec, ThreadMargin } from "thread/Settings"
 
 const RamUsage = {
     "hack": 1.70, // ns.getScriptRam("HybridShotgunBatcher/ThreadScripts/ThreadHack.js")
