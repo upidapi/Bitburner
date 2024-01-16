@@ -40,6 +40,8 @@ This a a autonomous hybrid batcher
 
 
 if you want to you could add:
+    batch size based on the predicted level when the batch completes
+
     calculations for hack %
 
     add a targeter that doesn't only care about the money per second
@@ -54,4 +56,3 @@ if you want to you could add:
         not what to use that server for a very long time so the total money
         per sec over the servers "use time" is worse than other options 
         
-        An interesting challenge for those whom hate themselves 

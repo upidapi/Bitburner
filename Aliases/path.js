@@ -51,7 +51,7 @@ export function get_path(ns, target, no_backdoor = false) {
         }
     }
 
-    return "connect " + path.join(";connect ")
+    return path
 }
 
 
@@ -61,12 +61,13 @@ export async function main(ns, no_backdoor) {
 
     var path = get_path(ns, target, no_backdoor)
 
+    const command = "connect " + path.join(";connect ")
     // makes everything automatic (needs 35gb ram tho and prob some late game thing)
     // for (let i = 0; i < path.length; i++) {
     // ns.singularity.connect(path[i])
     // }
 
-    ns.tprintf(path)
+    ns.tprintf(command)
     // navigator.clipboard.writeText(path)
 }
 
